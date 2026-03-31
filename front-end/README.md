@@ -1,16 +1,46 @@
-# React + Vite
+# Gradify Front-End Progress
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This front-end is built with React + Vite and currently includes the initial authentication flow and routing setup.
 
-Currently, two official plugins are available:
+## Progress Completed
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Project cleanup done:
+  - Removed unnecessary starter boilerplate from `src/App.jsx` and `src/main.jsx`
+  - Removed `src/App.css`
+- Folder structure created under `src/`:
+  - `pages/`
+  - `components/`
+- Routing added using `react-router-dom` in `src/App.jsx`:
+  - `/login` -> Login page
+  - `/signup` -> Signup page
+  - `/admin` -> Admin home page
+  - `/` and unknown routes redirect to `/login`
+- Auth pages implemented:
+  - `src/pages/auth/login.jsx`
+  - `src/pages/auth/signup.jsx`
+- API integration with Axios:
+  - Login POST -> `http://localhost:8081/api/auth/login`
+  - Signup POST -> `http://localhost:8081/api/auth/signup`
+- Navigation flow:
+  - Login success redirects to `/admin`
+  - Login page includes button to navigate to Signup (`No Account? Then signup page`)
+  - Signup success redirects back to `/login`
+- Admin page added:
+  - `src/pages/admin/AdminHomePage.jsx` with centered "Homepage" text
+- UI styling:
+  - Tailwind CSS-based black/grey theme applied to Login and Signup pages
 
-## React Compiler
+## Current Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React
+- Vite
+- React Router DOM
+- Axios
+- Tailwind CSS
 
-## Expanding the ESLint configuration
+## Next Suggested Steps
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Add client-side form validation (email format, password rules)
+- Store auth token (if backend returns one) and protect `/admin` route
+- Add logout flow
+- Add reusable input/button components in `src/components/`
