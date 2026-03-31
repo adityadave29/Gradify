@@ -1,0 +1,101 @@
+import { useState } from 'react'
+import axios from 'axios'
+import { useNavigate } from 'react-router-dom'
+
+function Login() {
+  const navigate = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setLoading(true)
+    setMessage('')
+
+    try {
+      const response = await axios.post('http://localhost:8081/api/auth/login', {
+        email,
+        password,
+      })
+
+      setMessage('Login request sent successfully')
+      console.log('Login response:', response.data)
+      navigate('/admin')
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Unable to reach server')
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-zinc-100">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-2xl shadow-black/40"
+      >
+        <h1 className="mb-2 text-2xl font-semibold tracking-tight text-zinc-100">
+          Welcome Back
+        </h1>
+        <p className="mb-6 text-sm text-zinc-400">Sign in to continue</p>
+
+        <div className="mb-4">
+          <label htmlFor="email" className="mb-2 block text-sm text-zinc-300">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-100 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/30"
+            placeholder="you@example.com"
+          />
+        </div>
+
+        <div className="mb-6">
+          <label htmlFor="password" className="mb-2 block text-sm text-zinc-300">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-100 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/30"
+            placeholder="Enter your password"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-lg bg-zinc-200 px-4 py-2.5 font-medium text-zinc-900 transition hover:bg-zinc-300 disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {loading ? 'Submitting...' : 'Submit'}
+        </button>
+
+        {message && (
+          <p className="mt-4 text-sm text-zinc-300" role="status">
+            {message}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={() => navigate('/signup')}
+          className="mt-4 w-full text-sm text-zinc-300 underline transition hover:text-zinc-100"
+        >
+          No Account? Then signup page
+        </button>
+      </form>
+    </div>
+  )
+}
+
+export default Login
