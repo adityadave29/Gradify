@@ -17,15 +17,15 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody LoginRequest request) {
-        try {
-            Map<String, Object> result = authService.signup(request);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
-        }
-    }
+    // @PostMapping("/signup")
+    // public ResponseEntity<?> signup(@RequestBody LoginRequest request) {
+    //     try {
+    //         Map<String, Object> result = authService.signup(request);
+    //         return ResponseEntity.ok(result);
+    //     } catch (Exception e) {
+    //         return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+    //     }
+    // }
 
     @PostMapping("/profile")
     public ResponseEntity<?> updateProfile(@RequestBody UserProfileUpdateRequest request) {

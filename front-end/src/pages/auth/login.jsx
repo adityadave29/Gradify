@@ -102,14 +102,6 @@ function Login() {
             {message}
           </p>
         )}
-
-        <button
-          type="button"
-          onClick={() => navigate('/signup')}
-          className="mt-4 w-full text-sm text-zinc-300 underline transition hover:text-zinc-100"
-        >
-          No Account? Then signup page
-        </button>
       </form>
     </div>
   )

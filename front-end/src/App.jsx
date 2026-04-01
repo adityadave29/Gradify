@@ -1,10 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import Login from './pages/auth/login'
+import AdminHomePage from './pages/admin/AdminHomePage'
 import { GuestOnly } from './components/GuestOnly'
 import { RequireAuth } from './components/RequireAuth'
-import Login from './pages/auth/login'
-import Signup from './pages/auth/signup'
-import SignUpExtension from './pages/auth/SignUpExtension'
-import AdminHomePage from './pages/admin/AdminHomePage'
 import { isAuthenticated } from './pages/auth/authStorage'
 
 function RootRedirect() {
@@ -33,22 +31,6 @@ function App() {
           element={
             <GuestOnly>
               <Login />
-            </GuestOnly>
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <GuestOnly>
-              <Signup />
-            </GuestOnly>
-          }
-        />
-        <Route
-          path="/signupextension"
-          element={
-            <GuestOnly>
-              <SignUpExtension />
             </GuestOnly>
           }
         />

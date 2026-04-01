@@ -2,8 +2,6 @@ import { Navigate } from 'react-router-dom'
 import { isAuthenticated } from '../pages/auth/authStorage'
 
 export function RequireAuth({ children }) {
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />
-  }
+  if (!isAuthenticated()) return <Navigate to="/login" replace />
   return children
 }

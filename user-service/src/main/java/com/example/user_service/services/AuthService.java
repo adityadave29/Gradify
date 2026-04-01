@@ -23,25 +23,25 @@ public class AuthService {
     public AuthService(RestTemplate restTemplate) {  // ← constructor injection
         this.restTemplate = restTemplate;
     }
-    public Map<String, Object> signup(LoginRequest request) {
-        String url = supabaseUrl + "/auth/v1/signup";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("apikey", supabaseAnonKey);
-
-        HttpEntity<Map<String, String>> entity = new HttpEntity<>(
-                Map.of("email", request.getEmail(), "password", request.getPassword()),
-                headers
-        );
-
-        try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-            return response.getBody();
-        } catch (HttpClientErrorException e) {
-            throw new RuntimeException("Failed to create user: " + e.getResponseBodyAsString());
-        }
-    }
+    // public Map<String, Object> signup(LoginRequest request) {
+    //     String url = supabaseUrl + "/auth/v1/signup";
+    //
+    //     HttpHeaders headers = new HttpHeaders();
+    //     headers.setContentType(MediaType.APPLICATION_JSON);
+    //     headers.set("apikey", supabaseAnonKey);
+    //
+    //     HttpEntity<Map<String, String>> entity = new HttpEntity<>(
+    //             Map.of("email", request.getEmail(), "password", request.getPassword()),
+    //             headers
+    //     );
+    //
+    //     try {
+    //         ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+    //         return response.getBody();
+    //     } catch (HttpClientErrorException e) {
+    //         throw new RuntimeException("Failed to create user: " + e.getResponseBodyAsString());
+    //     }
+    // }
 
     public Map<String, Object> updateUserProfile(UserProfileUpdateRequest request) {
         String url = supabaseUrl + "/rest/v1/users";
