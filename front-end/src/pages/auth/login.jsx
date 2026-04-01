@@ -49,15 +49,21 @@ function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-zinc-100">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4 text-zinc-100">
+      <div className="mb-6 text-center">
+        <div className="mx-auto inline-flex items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-950/40 px-5 py-2.5 shadow-2xl shadow-black/30">
+          <span className="bg-gradient-to-r from-white via-zinc-200 to-white bg-clip-text text-3xl font-semibold tracking-tight text-transparent">
+            Gradify
+          </span>
+        </div>
+      </div>
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-2xl shadow-black/40"
       >
-        <h1 className="mb-2 text-2xl font-semibold tracking-tight text-zinc-100">
-          Welcome Back
-        </h1>
-        <p className="mb-6 text-sm text-zinc-400">Sign in to continue</p>
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Sign In</h1>
+        </div>
 
         <div className="mb-4">
           <label htmlFor="email" className="mb-2 block text-sm text-zinc-300">
