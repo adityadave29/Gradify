@@ -13,19 +13,24 @@ export function saveSession(body) {
 
   const { access_token, refresh_token, expires_in, user } = body
 
-  if (access_token) localStorage.setItem(KEYS.access, access_token)
+  if (access_token) {
+    localStorage.setItem(KEYS.access, access_token)
+    const seconds = typeof expires_in === 'number' ? expires_in : 3600
+    localStorage.setItem(KEYS.expiresAt, String(Date.now() + seconds * 1000))
+  }
   if (refresh_token) localStorage.setItem(KEYS.refresh, refresh_token)
-
-  const seconds = typeof expires_in === 'number' ? expires_in : 3600
-  localStorage.setItem(KEYS.expiresAt, String(Date.now() + seconds * 1000))
 
   if (user !== undefined && user !== null) {
     localStorage.setItem(KEYS.user, JSON.stringify(user))
   }
 }
 
+/** Clears everything written by `saveSession` (tokens + expiry + user). */
 export function clearSession() {
-  Object.values(KEYS).forEach((k) => localStorage.removeItem(k))
+  localStorage.removeItem(KEYS.access)
+  localStorage.removeItem(KEYS.refresh)
+  localStorage.removeItem(KEYS.expiresAt)
+  localStorage.removeItem(KEYS.user)
 }
 
 export function getAccessToken() {

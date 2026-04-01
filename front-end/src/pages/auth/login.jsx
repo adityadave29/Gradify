@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
-import { saveSession } from './authStorage'
+import { api } from '../../api/client'
+import { isAuthenticated, saveSession } from './authStorage'
 
 function Login() {
   const navigate = useNavigate()
@@ -16,13 +16,7 @@ function Login() {
     setMessage('')
 
     try {
-      const response = await axios.post(
-        'http://localhost:8081/api/auth/login',
-        { email, password },
-        { headers: { 'Content-Type': 'application/json' } }
-      )
-
-      setMessage('Login request sent successfully')
+      const response = await api.post('/api/auth/login', { email, password })
 
       const body = response.data
       console.log('Login — full response:', body)
@@ -35,6 +29,16 @@ function Login() {
       }
 
       saveSession(body)
+      if (!isAuthenticated()) {
+        setMessage(
+          body?.error ||
+            body?.message ||
+            'Login failed: no access token from server. Is the API gateway running?'
+        )
+        return
+      }
+
+      setMessage('Login request sent successfully')
       navigate('/admin')
     } catch (error) {
       setMessage(
