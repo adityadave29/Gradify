@@ -1,36 +1,28 @@
-# Gradify Front-End Progress
+# Gradify Front-End
 
-This front-end is built with React + Vite and currently includes the initial authentication flow and routing setup.
+React + Vite frontend for Gradify.
 
-## Progress Completed
+## Current Features
 
-- Project cleanup done:
-  - Removed unnecessary starter boilerplate from `src/App.jsx` and `src/main.jsx`
-  - Removed `src/App.css`
-- Folder structure created under `src/`:
-  - `pages/`
-  - `components/`
-- Routing added using `react-router-dom` in `src/App.jsx`:
-  - `/login` -> Login page
-  - `/signup` -> Signup page
-  - `/admin` -> Admin home page
-  - `/` and unknown routes redirect to `/login`
-- Auth pages implemented:
-  - `src/pages/auth/login.jsx`
-  - `src/pages/auth/signup.jsx`
-- API integration with Axios:
-  - Login POST -> `http://localhost:8081/api/auth/login`
-  - Signup POST -> `http://localhost:8081/api/auth/signup`
-- Navigation flow:
-  - Login success redirects to `/admin`
-  - Login page includes button to navigate to Signup (`No Account? Then signup page`)
-  - Signup success redirects back to `/login`
-- Admin page added:
-  - `src/pages/admin/AdminHomePage.jsx` with centered "Homepage" text
-- UI styling:
-  - Tailwind CSS-based black/grey theme applied to Login and Signup pages
+- **Login**: `src/pages/auth/login.jsx`
+  - Calls `POST http://localhost:8081/api/auth/login` with JSON `{ email, password }`
+  - Logs the full response to console (including `access_token`, `refresh_token`, etc. when present)
+- **JWT/session persistence (frontend)**: `src/pages/auth/authStorage.js`
+  - Stores tokens + expiry in `localStorage`
+  - `isAuthenticated()` is used for routing decisions
+- **Route guards**
+  - `/login` is **guest-only** (if already authenticated → redirects to `/admin`)
+  - `/admin` is **protected** (if not authenticated → redirects to `/login`)
+- **Logout**
+  - Available on `/admin` and clears `localStorage` session, then redirects to `/login`
 
-## Current Tech Stack
+## Routes
+
+- `/` → redirects to `/admin` when authenticated, otherwise `/login`
+- `/login` → login screen
+- `/admin` → protected home page
+
+## Tech Stack
 
 - React
 - Vite
@@ -38,9 +30,7 @@ This front-end is built with React + Vite and currently includes the initial aut
 - Axios
 - Tailwind CSS
 
-## Next Suggested Steps
+## Notes
 
-- Add client-side form validation (email format, password rules)
-- Store auth token (if backend returns one) and protect `/admin` route
-- Add logout flow
-- Add reusable input/button components in `src/components/`
+- **Signup flow/pages are intentionally removed for now** and will be added later.
+- Access tokens expire (e.g. `expires_in: 3600`). Refresh-token rotation is not implemented yet; once expired, the user will be prompted to log in again.
