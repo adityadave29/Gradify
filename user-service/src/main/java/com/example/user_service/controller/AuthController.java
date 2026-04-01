@@ -1,5 +1,6 @@
 package com.example.user_service.controller;
 import com.example.user_service.dto.LoginRequest;
+import com.example.user_service.dto.UserProfileUpdateRequest;
 import com.example.user_service.services.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,16 @@ public class AuthController {
     public ResponseEntity<?> signup(@RequestBody LoginRequest request) {
         try {
             Map<String, Object> result = authService.signup(request);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/profile")
+    public ResponseEntity<?> updateProfile(@RequestBody UserProfileUpdateRequest request) {
+        try {
+            Map<String, Object> result = authService.updateUserProfile(request);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));

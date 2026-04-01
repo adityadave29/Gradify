@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
+import { saveSession } from './authStorage'
 
 function Login() {
   const navigate = useNavigate()
@@ -15,16 +16,32 @@ function Login() {
     setMessage('')
 
     try {
-      const response = await axios.post('http://localhost:8081/api/auth/login', {
-        email,
-        password,
-      })
+      const response = await axios.post(
+        'http://localhost:8081/api/auth/login',
+        { email, password },
+        { headers: { 'Content-Type': 'application/json' } }
+      )
 
       setMessage('Login request sent successfully')
-      console.log('Login response:', response.data)
+
+      const body = response.data
+      console.log('Login — full response:', body)
+      if (body && typeof body === 'object') {
+        console.log('Login — access_token:', body.access_token)
+        console.log('Login — refresh_token:', body.refresh_token)
+        console.log('Login — expires_in:', body.expires_in)
+        console.log('Login — token_type:', body.token_type)
+        console.log('Login — user:', body.user)
+      }
+
+      saveSession(body)
       navigate('/admin')
     } catch (error) {
-      setMessage(error.response?.data?.message || 'Unable to reach server')
+      setMessage(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          'Unable to reach server'
+      )
       console.error(error)
     } finally {
       setLoading(false)
