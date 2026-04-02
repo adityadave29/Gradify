@@ -1,13 +1,15 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Login from './pages/auth/login'
 import AdminHomePage from './pages/admin/AdminHomePage'
+import AdminHomepage from './pages/admin-service/admin-homepage'
+import CreateUser from './pages/admin-service/create-user'
 import { GuestOnly } from './components/GuestOnly'
 import { RequireAuth } from './components/RequireAuth'
 import { isAuthenticated } from './pages/auth/authStorage'
 
 function RootRedirect() {
   return isAuthenticated() ? (
-    <Navigate to="/admin" replace />
+    <Navigate to="/admin-service" replace />
   ) : (
     <Navigate to="/login" replace />
   )
@@ -15,7 +17,7 @@ function RootRedirect() {
 
 function NotFoundRedirect() {
   return isAuthenticated() ? (
-    <Navigate to="/admin" replace />
+    <Navigate to="/admin-service" replace />
   ) : (
     <Navigate to="/login" replace />
   )
@@ -39,6 +41,22 @@ function App() {
           element={
             <RequireAuth>
               <AdminHomePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin-service"
+          element={
+            <RequireAuth>
+              <AdminHomepage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin-service/create-user"
+          element={
+            <RequireAuth>
+              <CreateUser />
             </RequireAuth>
           }
         />

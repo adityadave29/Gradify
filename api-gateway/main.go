@@ -17,6 +17,7 @@ import (
 type config struct {
 	addr          string
 	userService   *url.URL
+	adminService  *url.URL
 	allowedOrigin []string
 }
 
@@ -32,6 +33,7 @@ func main() {
 
 	// Routes
 	mux.Handle("/api/auth/", withRequestLogging(withCORS(cfg.allowedOrigin, reverseProxy(cfg.userService))))
+	mux.Handle("/api/admin/", withRequestLogging(withCORS(cfg.allowedOrigin, reverseProxy(cfg.adminService))))
 
 	// Nice error for unknown routes (helps frontend debugging).
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +55,7 @@ func main() {
 
 	log.Printf("api-gateway listening on %s", cfg.addr)
 	log.Printf("proxy /api/auth/* -> %s", cfg.userService.String())
+	log.Printf("proxy /api/admin/* -> %s", cfg.adminService.String())
 
 	go func() {
 		if err := srv.Serve(l); err != nil && err != http.ErrServerClosed {
@@ -78,12 +81,19 @@ func mustLoadConfig() config {
 		log.Fatalf("invalid USER_SERVICE_URL %q: %v", userServiceURL, err)
 	}
 
+	adminServiceURL := envOr("ADMIN_SERVICE_URL", "http://localhost:8083")
+	a, err := url.Parse(adminServiceURL)
+	if err != nil {
+		log.Fatalf("invalid ADMIN_SERVICE_URL %q: %v", adminServiceURL, err)
+	}
+
 	allowed := envOr("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
 	allowedOrigins := splitCSV(allowed)
 
 	return config{
 		addr:          addr,
 		userService:   u,
+		adminService:  a,
 		allowedOrigin: allowedOrigins,
 	}
 }
