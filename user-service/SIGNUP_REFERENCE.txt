@@ -99,3 +99,29 @@ The following frontend files also contain signup functionality that may need to 
 - The endpoint creates a new user in Supabase auth system
 - Error handling returns appropriate HTTP status codes and error messages
 - The LoginRequest DTO is used for both login and signup operations
+
+
+
+
+<schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<element name="juicers" type="juicersType" />
+	<element name="juicer">
+		<complexType >
+		<sequence>
+			<element name="name" type="string" />
+			<element name="image" type="string" />
+			<element name="description" type="string" />
+			<element name="warranty" minOccurs="0" type="string" />
+			<element name="weight" minOccurs="0" type="decimal" />
+			<element name="cost" maxOccurs="unbounded" type="decimal" />
+			<element name="retailer" type="string" />
+		</sequence>
+	</complexType>
+	</element>
+	<complexType name="juicersType">
+		<sequence>
+			<element ref="juicer" minOccurs="0" maxOccurs="unbounded"/>
+		</sequence>
+	</complexType>
+	
+</schema>

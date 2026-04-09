@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.admin_service.service.SupabaseAuthAdminService;
 import com.example.admin_service.service.SupabaseAuthAdminService.SupabaseAuthException;
+import com.example.admin_service.service.SupabaseAuthAdminService.UserProfileNotFoundException;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -50,9 +51,110 @@ public class AdminController {
 					"details", e.getResponseBody()));
 		} catch (IllegalStateException e) {
 			return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", e.getMessage()));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+					"error", "unexpected_admin_service_error",
+					"details", e.getClass().getSimpleName() + ": " + e.getMessage()));
+		}
+	}
+
+	@PostMapping("/users/profile")
+	public ResponseEntity<?> updateUserProfile(@RequestBody UpdateUserProfileRequest body) {
+		if (body.email() == null || body.email().isBlank()) {
+			return ResponseEntity.badRequest().body(Map.of("error", "email_required"));
+		}
+		if (body.name() == null || body.name().isBlank()) {
+			return ResponseEntity.badRequest().body(Map.of("error", "name_required"));
+		}
+		if (body.role() == null || body.role().isBlank()) {
+			return ResponseEntity.badRequest().body(Map.of("error", "role_required"));
+		}
+
+		String normalizedRole = body.role().trim().toUpperCase();
+		if (!normalizedRole.equals("STUDENT") && !normalizedRole.equals("PROFESSOR")) {
+			return ResponseEntity.badRequest().body(Map.of("error", "invalid_role"));
+		}
+
+		try {
+			supabaseAuthAdminService.updateUserProfile(body.email().trim(), body.userId(), body.name().trim(), normalizedRole);
+			return ResponseEntity.ok(Map.of("updated", true));
+		} catch (SupabaseAuthException e) {
+			return ResponseEntity.status(e.getStatus()).body(Map.of(
+					"error", "supabase_rest_update_failed",
+					"details", e.getResponseBody()));
+		} catch (IllegalStateException e) {
+			return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", e.getMessage()));
+		} catch (UserProfileNotFoundException e) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+					"error", "unexpected_admin_service_error",
+					"details", e.getClass().getSimpleName() + ": " + e.getMessage()));
+		}
+	}
+
+	@GetMapping("/professors")
+	public ResponseEntity<?> listProfessors() {
+		if (!supabaseAuthAdminService.isServiceRoleConfigured()) {
+			return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+					"error", "supabase_service_role_not_configured"));
+		}
+		try {
+			return ResponseEntity.ok(supabaseAuthAdminService.listProfessors());
+		} catch (SupabaseAuthException e) {
+			return ResponseEntity.status(e.getStatus()).body(Map.of(
+					"error", "supabase_professors_fetch_failed",
+					"details", e.getResponseBody()));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+					"error", "unexpected_admin_service_error",
+					"details", e.getClass().getSimpleName() + ": " + e.getMessage()));
+		}
+	}
+
+	@PostMapping("/courses")
+	public ResponseEntity<?> createCourse(@RequestBody CreateCourseRequest body) {
+		if (body.professorId() == null || body.professorId().isBlank()) {
+			return ResponseEntity.badRequest().body(Map.of("error", "professor_id_required"));
+		}
+		if (body.courseCode() == null || body.courseCode().isBlank()) {
+			return ResponseEntity.badRequest().body(Map.of("error", "course_code_required"));
+		}
+		if (body.courseName() == null || body.courseName().isBlank()) {
+			return ResponseEntity.badRequest().body(Map.of("error", "course_name_required"));
+		}
+		if (body.createdAt() == null || body.createdAt().isBlank()) {
+			return ResponseEntity.badRequest().body(Map.of("error", "created_at_required"));
+		}
+		if (!supabaseAuthAdminService.isServiceRoleConfigured()) {
+			return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+					"error", "supabase_service_role_not_configured"));
+		}
+
+		try {
+			Map<String, Object> created = supabaseAuthAdminService.createCourse(
+					body.professorId().trim(),
+					body.courseCode().trim(),
+					body.courseName().trim(),
+					body.createdAt().trim());
+			return ResponseEntity.status(HttpStatus.CREATED).body(created);
+		} catch (SupabaseAuthException e) {
+			return ResponseEntity.status(e.getStatus()).body(Map.of(
+					"error", "supabase_course_create_failed",
+					"details", e.getResponseBody()));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+					"error", "unexpected_admin_service_error",
+					"details", e.getClass().getSimpleName() + ": " + e.getMessage()));
 		}
 	}
 
 	public record CreateUserRequest(String email, String password) {
+	}
+
+	public record UpdateUserProfileRequest(String email, String userId, String name, String role) {
+	}
+
+	public record CreateCourseRequest(String professorId, String courseCode, String courseName, String createdAt) {
 	}
 }

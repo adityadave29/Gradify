@@ -26,6 +26,12 @@ function AdminHomepage() {
         >
           Create user
         </Link>
+        <Link
+          to="/admin-service/create-course"
+          className="rounded-lg border border-zinc-600 px-4 py-2 text-center text-sm text-zinc-300 transition hover:border-zinc-500 hover:bg-zinc-900"
+        >
+          Create course
+        </Link>
         <button
           type="button"
           onClick={handleLogout}
