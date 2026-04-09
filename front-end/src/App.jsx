@@ -5,6 +5,7 @@ import AdminHomepage from './pages/admin-service/admin-homepage'
 import CreateUser from './pages/admin-service/create-user'
 import CreateUserDetails from './pages/admin-service/create-user-details'
 import CreateCourse from './pages/admin-service/create-course'
+import AddCourseUsers from './pages/admin-service/add-course-users'
 import { GuestOnly } from './components/GuestOnly'
 import { RequireAuth } from './components/RequireAuth'
 import { isAuthenticated } from './pages/auth/authStorage'
@@ -75,6 +76,14 @@ function App() {
           element={
             <RequireAuth>
               <CreateCourse />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin-service/courses/:courseId/users"
+          element={
+            <RequireAuth>
+              <AddCourseUsers />
             </RequireAuth>
           }
         />

@@ -3,6 +3,9 @@ package com.example.admin_service.service;
 import java.util.Map;
 import java.util.List;
 import java.util.Collections;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.nio.charset.StandardCharsets;
 import java.net.URLEncoder;
 
@@ -143,6 +146,192 @@ public class SupabaseAuthAdminService {
 				return (Map<String, Object>) first;
 			}
 			return Map.of("created", true);
+		} catch (HttpClientErrorException e) {
+			throw new SupabaseAuthException(e.getStatusCode().value(), e.getResponseBodyAsString());
+		} catch (RestClientResponseException e) {
+			throw new SupabaseAuthException(e.getStatusCode().value(), e.getResponseBodyAsString());
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public List<Map<String, Object>> listCourses() {
+		if (!isServiceRoleConfigured()) {
+			throw new IllegalStateException("supabase_service_role_not_configured");
+		}
+
+		String url = supabaseUrl.replaceAll("/+$", "")
+				+ "/rest/v1/courses?select=id,course_code,course_name,created_at,professor_id&order=created_at.desc";
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("apikey", serviceRoleKey);
+		headers.set("Authorization", "Bearer " + serviceRoleKey);
+
+		try {
+			ResponseEntity<List> response = restTemplate.exchange(
+					url,
+					HttpMethod.GET,
+					new HttpEntity<>(headers),
+					List.class);
+			List body = response.getBody();
+			if (body == null) {
+				return Collections.emptyList();
+			}
+			return body;
+		} catch (HttpClientErrorException e) {
+			throw new SupabaseAuthException(e.getStatusCode().value(), e.getResponseBodyAsString());
+		} catch (RestClientResponseException e) {
+			throw new SupabaseAuthException(e.getStatusCode().value(), e.getResponseBodyAsString());
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public List<Map<String, Object>> listStudents() {
+		if (!isServiceRoleConfigured()) {
+			throw new IllegalStateException("supabase_service_role_not_configured");
+		}
+
+		String url = supabaseUrl.replaceAll("/+$", "")
+				+ "/rest/v1/users?select=id,email,name,role&role=eq.STUDENT&order=created_at.desc";
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("apikey", serviceRoleKey);
+		headers.set("Authorization", "Bearer " + serviceRoleKey);
+
+		try {
+			ResponseEntity<List> response = restTemplate.exchange(
+					url,
+					HttpMethod.GET,
+					new HttpEntity<>(headers),
+					List.class);
+			List body = response.getBody();
+			if (body == null) {
+				return Collections.emptyList();
+			}
+			return body;
+		} catch (HttpClientErrorException e) {
+			throw new SupabaseAuthException(e.getStatusCode().value(), e.getResponseBodyAsString());
+		} catch (RestClientResponseException e) {
+			throw new SupabaseAuthException(e.getStatusCode().value(), e.getResponseBodyAsString());
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public List<String> listEnrolledStudentIds(int courseId) {
+		if (!isServiceRoleConfigured()) {
+			throw new IllegalStateException("supabase_service_role_not_configured");
+		}
+
+		String url = supabaseUrl.replaceAll("/+$", "")
+				+ "/rest/v1/enrollments?select=student_id&course_id=eq." + courseId;
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("apikey", serviceRoleKey);
+		headers.set("Authorization", "Bearer " + serviceRoleKey);
+
+		try {
+			ResponseEntity<List> response = restTemplate.exchange(
+					url,
+					HttpMethod.GET,
+					new HttpEntity<>(headers),
+					List.class);
+			List<Map<String, Object>> rows = response.getBody();
+			if (rows == null) {
+				return Collections.emptyList();
+			}
+
+			List<String> studentIds = new ArrayList<>();
+			for (Map<String, Object> row : rows) {
+				Object studentId = row.get("student_id");
+				if (studentId != null) {
+					studentIds.add(String.valueOf(studentId));
+				}
+			}
+			return studentIds;
+		} catch (HttpClientErrorException e) {
+			throw new SupabaseAuthException(e.getStatusCode().value(), e.getResponseBodyAsString());
+		} catch (RestClientResponseException e) {
+			throw new SupabaseAuthException(e.getStatusCode().value(), e.getResponseBodyAsString());
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> syncCourseEnrollments(int courseId, List<String> selectedStudentIds) {
+		if (!isServiceRoleConfigured()) {
+			throw new IllegalStateException("supabase_service_role_not_configured");
+		}
+
+		Set<String> targetSet = new HashSet<>();
+		for (String id : selectedStudentIds) {
+			if (id != null && !id.isBlank()) {
+				targetSet.add(id.trim());
+			}
+		}
+
+		List<String> existingIds = listEnrolledStudentIds(courseId);
+		Set<String> existingSet = new HashSet<>(existingIds);
+
+		List<String> toAdd = new ArrayList<>();
+		for (String id : targetSet) {
+			if (!existingSet.contains(id)) {
+				toAdd.add(id);
+			}
+		}
+
+		List<String> toRemove = new ArrayList<>();
+		for (String id : existingSet) {
+			if (!targetSet.contains(id)) {
+				toRemove.add(id);
+			}
+		}
+
+		if (!toAdd.isEmpty()) {
+			insertEnrollments(courseId, toAdd);
+		}
+		if (!toRemove.isEmpty()) {
+			deleteEnrollments(courseId, toRemove);
+		}
+
+		return Map.of(
+				"courseId", courseId,
+				"added", toAdd.size(),
+				"removed", toRemove.size(),
+				"selectedCount", targetSet.size());
+	}
+
+	private void insertEnrollments(int courseId, List<String> studentIds) {
+		String url = supabaseUrl.replaceAll("/+$", "") + "/rest/v1/enrollments";
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.set("apikey", serviceRoleKey);
+		headers.set("Authorization", "Bearer " + serviceRoleKey);
+
+		List<Map<String, Object>> payload = new ArrayList<>();
+		for (String studentId : studentIds) {
+			payload.add(Map.of("course_id", courseId, "student_id", studentId));
+		}
+
+		try {
+			restTemplate.postForEntity(url, new HttpEntity<>(payload, headers), List.class);
+		} catch (HttpClientErrorException e) {
+			throw new SupabaseAuthException(e.getStatusCode().value(), e.getResponseBodyAsString());
+		} catch (RestClientResponseException e) {
+			throw new SupabaseAuthException(e.getStatusCode().value(), e.getResponseBodyAsString());
+		}
+	}
+
+	private void deleteEnrollments(int courseId, List<String> studentIds) {
+		String csv = String.join(",", studentIds);
+		String encodedCsv = URLEncoder.encode(csv, StandardCharsets.UTF_8);
+		String url = supabaseUrl.replaceAll("/+$", "")
+				+ "/rest/v1/enrollments?course_id=eq." + courseId + "&student_id=in.(" + encodedCsv + ")";
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("apikey", serviceRoleKey);
+		headers.set("Authorization", "Bearer " + serviceRoleKey);
+
+		try {
+			restTemplate.exchange(url, HttpMethod.DELETE, new HttpEntity<>(headers), String.class);
 		} catch (HttpClientErrorException e) {
 			throw new SupabaseAuthException(e.getStatusCode().value(), e.getResponseBodyAsString());
 		} catch (RestClientResponseException e) {

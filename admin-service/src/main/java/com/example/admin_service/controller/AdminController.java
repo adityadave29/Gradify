@@ -1,11 +1,14 @@
 package com.example.admin_service.controller;
 
 import java.util.Map;
+import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -149,6 +152,87 @@ public class AdminController {
 		}
 	}
 
+	@GetMapping("/courses")
+	public ResponseEntity<?> listCourses() {
+		if (!supabaseAuthAdminService.isServiceRoleConfigured()) {
+			return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+					"error", "supabase_service_role_not_configured"));
+		}
+		try {
+			return ResponseEntity.ok(supabaseAuthAdminService.listCourses());
+		} catch (SupabaseAuthException e) {
+			return ResponseEntity.status(e.getStatus()).body(Map.of(
+					"error", "supabase_courses_fetch_failed",
+					"details", e.getResponseBody()));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+					"error", "unexpected_admin_service_error",
+					"details", e.getClass().getSimpleName() + ": " + e.getMessage()));
+		}
+	}
+
+	@GetMapping("/students")
+	public ResponseEntity<?> listStudents() {
+		if (!supabaseAuthAdminService.isServiceRoleConfigured()) {
+			return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+					"error", "supabase_service_role_not_configured"));
+		}
+		try {
+			return ResponseEntity.ok(supabaseAuthAdminService.listStudents());
+		} catch (SupabaseAuthException e) {
+			return ResponseEntity.status(e.getStatus()).body(Map.of(
+					"error", "supabase_students_fetch_failed",
+					"details", e.getResponseBody()));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+					"error", "unexpected_admin_service_error",
+					"details", e.getClass().getSimpleName() + ": " + e.getMessage()));
+		}
+	}
+
+	@GetMapping("/courses/{courseId}/enrollments")
+	public ResponseEntity<?> listCourseEnrollments(@PathVariable int courseId) {
+		if (!supabaseAuthAdminService.isServiceRoleConfigured()) {
+			return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+					"error", "supabase_service_role_not_configured"));
+		}
+		try {
+			return ResponseEntity.ok(Map.of(
+					"courseId", courseId,
+					"studentIds", supabaseAuthAdminService.listEnrolledStudentIds(courseId)));
+		} catch (SupabaseAuthException e) {
+			return ResponseEntity.status(e.getStatus()).body(Map.of(
+					"error", "supabase_enrollments_fetch_failed",
+					"details", e.getResponseBody()));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+					"error", "unexpected_admin_service_error",
+					"details", e.getClass().getSimpleName() + ": " + e.getMessage()));
+		}
+	}
+
+	@PutMapping("/courses/{courseId}/enrollments")
+	public ResponseEntity<?> syncCourseEnrollments(@PathVariable int courseId, @RequestBody SyncEnrollmentRequest body) {
+		if (body.studentIds() == null) {
+			return ResponseEntity.badRequest().body(Map.of("error", "student_ids_required"));
+		}
+		if (!supabaseAuthAdminService.isServiceRoleConfigured()) {
+			return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+					"error", "supabase_service_role_not_configured"));
+		}
+		try {
+			return ResponseEntity.ok(supabaseAuthAdminService.syncCourseEnrollments(courseId, body.studentIds()));
+		} catch (SupabaseAuthException e) {
+			return ResponseEntity.status(e.getStatus()).body(Map.of(
+					"error", "supabase_enrollments_sync_failed",
+					"details", e.getResponseBody()));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+					"error", "unexpected_admin_service_error",
+					"details", e.getClass().getSimpleName() + ": " + e.getMessage()));
+		}
+	}
+
 	public record CreateUserRequest(String email, String password) {
 	}
 
@@ -156,5 +240,8 @@ public class AdminController {
 	}
 
 	public record CreateCourseRequest(String professorId, String courseCode, String courseName, String createdAt) {
+	}
+
+	public record SyncEnrollmentRequest(List<String> studentIds) {
 	}
 }
