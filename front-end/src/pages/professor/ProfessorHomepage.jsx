@@ -10,9 +10,46 @@ function ProfessorHomepage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const [selectedCourse, setSelectedCourse] = useState(null)
+  const [students, setStudents] = useState([])
+  const [loadingStudents, setLoadingStudents] = useState(false)
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    async function fetchCourses() {
+      setLoading(true)
+      try {
+        const response = await api.get(`/api/professor/courses?professorId=${user.id}`)
+        setCourses(response.data)
+      } catch (err) {
+        console.error('Failed to fetch courses:', err)
+        setError('Could not load courses. Please try again.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCourses()
+  }, [user?.id])
+
   const handleLogout = () => {
     clearSession()
     navigate('/login', { replace: true })
+  }
+
+  const handleViewStudents = async (course) => {
+    setSelectedCourse(course)
+    setLoadingStudents(true)
+    setStudents([])
+    try {
+      const response = await api.get(`/api/professor/courses/${course.id}/students`)
+      setStudents(response.data)
+    } catch (err) {
+      console.error('Failed to fetch students:', err)
+    } finally {
+      setLoadingStudents(false)
+    }
   }
 
   return (
@@ -41,16 +78,105 @@ function ProfessorHomepage() {
             <h2 className="text-xl font-semibold tracking-tight text-zinc-100">Teaching Courses</h2>
           </div>
 
-          <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 p-12 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800/50">
-              <svg className="h-6 w-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
+          {loading ? (
+            <div className="py-12 text-center text-zinc-500">Loading courses...</div>
+          ) : error ? (
+            <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-6 text-center text-red-400">
+              {error}
             </div>
-            <h3 className="text-sm font-medium text-zinc-300">No courses assigned</h3>
-            <p className="mt-1 text-xs text-zinc-500">You are currently not teaching any courses.</p>
-          </div>
+          ) : courses.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {courses.map((course) => (
+                <div
+                  key={course.id}
+                  className="group flex flex-col justify-between rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 transition hover:border-zinc-700 hover:bg-zinc-800/80"
+                >
+                  <div>
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 transition group-hover:bg-zinc-700">
+                      <svg className="h-5 w-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    </div>
+                    <h3 className="font-semibold text-zinc-100">{course.course_name}</h3>
+                    <p className="mt-1 text-sm text-zinc-500">{course.course_code}</p>
+                  </div>
+                  <button
+                    onClick={() => handleViewStudents(course)}
+                    className="mt-6 rounded-lg bg-zinc-800 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-emerald-400"
+                  >
+                    View Enrolled Students
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 p-12 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800/50">
+                <svg className="h-6 w-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <h3 className="text-sm font-medium text-zinc-300">No courses assigned</h3>
+              <p className="mt-1 text-xs text-zinc-500">You are currently not teaching any courses.</p>
+            </div>
+          )}
         </section>
+
+        {selectedCourse && (
+          <section className="mt-12 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="mb-6 flex items-center justify-between border-b border-zinc-800 pb-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSelectedCourse(null)}
+                  className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                </button>
+                <div>
+                  <h2 className="text-xl font-semibold tracking-tight text-zinc-100">
+                    Students Enrolled: <span className="text-emerald-400">{selectedCourse.course_name}</span>
+                  </h2>
+                  <p className="text-xs text-zinc-500">{selectedCourse.course_code}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+              <table className="w-full text-left text-sm text-zinc-300">
+                <thead className="bg-zinc-800/50 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  <tr>
+                    <th className="px-6 py-4">Student Name</th>
+                    <th className="px-6 py-4">Email</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800">
+                  {loadingStudents ? (
+                    <tr>
+                      <td colSpan="2" className="px-6 py-10 text-center text-zinc-500">
+                        Fetching enrollment list...
+                      </td>
+                    </tr>
+                  ) : students.length > 0 ? (
+                    students.map((student, idx) => (
+                      <tr key={idx} className="transition hover:bg-zinc-800/30">
+                        <td className="px-6 py-4 font-medium text-zinc-200">{student.name}</td>
+                        <td className="px-6 py-4 text-zinc-400">{student.email}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="2" className="px-6 py-10 text-center text-zinc-500">
+                        No students enrolled in this course yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   )

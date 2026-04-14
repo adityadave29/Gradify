@@ -1,0 +1,5 @@
+com/example/professor_service/model/Course.class
+com/example/professor_service/model/StudentDTO.class
+com/example/professor_service/controller/ProfessorController.class
+com/example/professor_service/ProfessorServiceApplication.class
+com/example/professor_service/service/ProfessorService.class
