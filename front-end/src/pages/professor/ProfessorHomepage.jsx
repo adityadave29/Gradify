@@ -38,6 +38,10 @@ function ProfessorHomepage() {
     navigate(`/professor/courses/${courseId}/students`)
   }
 
+  const handleViewComponents = (courseId) => {
+    navigate(`/professor/courses/${courseId}/components`)
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 px-4 py-10 text-zinc-100">
       <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-8">
@@ -71,7 +75,7 @@ function ProfessorHomepage() {
               {error}
             </div>
           ) : courses.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {courses.map((course) => (
                 <div
                   key={course.id}
@@ -86,12 +90,27 @@ function ProfessorHomepage() {
                     <h3 className="font-semibold text-zinc-100">{course.course_name}</h3>
                     <p className="mt-1 text-sm text-zinc-500">{course.course_code}</p>
                   </div>
-                  <button
-                    onClick={() => handleViewStudents(course.id)}
-                    className="mt-6 rounded-lg bg-zinc-800 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-emerald-400"
-                  >
-                    View Enrolled Students
-                  </button>
+                  
+                  <div className="mt-8 flex flex-col gap-2">
+                    <button
+                      onClick={() => handleViewStudents(course.id)}
+                      className="flex items-center justify-center gap-2 rounded-lg bg-zinc-800/50 py-2.5 text-xs font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-emerald-400 border border-zinc-700/50"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                      View Enrollments
+                    </button>
+                    <button
+                      onClick={() => handleViewComponents(course.id)}
+                      className="flex items-center justify-center gap-2 rounded-lg bg-zinc-800/50 py-2.5 text-xs font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-blue-400 border border-zinc-700/50"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      Evaluation Components
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
