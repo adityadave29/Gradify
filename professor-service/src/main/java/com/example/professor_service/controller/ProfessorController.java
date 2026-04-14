@@ -1,6 +1,7 @@
 package com.example.professor_service.controller;
 
 import com.example.professor_service.model.Course;
+import com.example.professor_service.model.EvaluationComponent;
 import com.example.professor_service.model.StudentDTO;
 import com.example.professor_service.service.ProfessorService;
 import org.springframework.web.bind.annotation.*;
@@ -30,5 +31,26 @@ public class ProfessorController {
     @GetMapping("/courses/{courseId}")
     public Course getCourse(@PathVariable Integer courseId) {
         return professorService.getCourseByCourseId(courseId);
+    }
+
+    @GetMapping("/courses/{courseId}/components")
+    public List<EvaluationComponent> getComponents(@PathVariable Integer courseId) {
+        return professorService.getEvaluationComponents(courseId);
+    }
+
+    @PostMapping("/courses/{courseId}/components")
+    public EvaluationComponent addComponent(@PathVariable Integer courseId, @RequestBody EvaluationComponent component) {
+        component.setCourseId(courseId);
+        return professorService.addEvaluationComponent(component);
+    }
+
+    @PutMapping("/components/{componentId}")
+    public EvaluationComponent updateComponent(@PathVariable Integer componentId, @RequestBody EvaluationComponent component) {
+        return professorService.updateEvaluationComponent(componentId, component);
+    }
+
+    @DeleteMapping("/components/{componentId}")
+    public void deleteComponent(@PathVariable Integer componentId) {
+        professorService.deleteEvaluationComponent(componentId);
     }
 }

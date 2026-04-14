@@ -1,6 +1,7 @@
 package com.example.professor_service.service;
 
 import com.example.professor_service.model.Course;
+import com.example.professor_service.model.EvaluationComponent;
 import com.example.professor_service.model.StudentDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -8,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
@@ -111,5 +113,115 @@ public class ProfessorService {
             return response.getBody()[0];
         }
         return null;
+    }
+
+    public List<EvaluationComponent> getEvaluationComponents(Integer courseId) {
+        String url = supabaseUrl + "/rest/v1/evaluation_components?course_id=eq." + courseId + "&select=*&order=created_at.asc";
+        String key = getEffectiveKey();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<EvaluationComponent[]> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                EvaluationComponent[].class
+        );
+
+        if (response.getBody() != null) {
+            return Arrays.asList(response.getBody());
+        }
+        return List.of();
+    }
+
+    public EvaluationComponent addEvaluationComponent(EvaluationComponent component) {
+        String url = supabaseUrl + "/rest/v1/evaluation_components";
+        String key = getEffectiveKey();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+        headers.set("Prefer", "return=representation");
+
+        HttpEntity<EvaluationComponent> entity = new HttpEntity<>(component, headers);
+
+        try {
+            ResponseEntity<EvaluationComponent[]> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    EvaluationComponent[].class
+            );
+
+            if (response.getBody() != null && response.getBody().length > 0) {
+                return response.getBody()[0];
+            }
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (POST): " + e.getResponseBodyAsString());
+            throw e;
+        }
+        return null;
+    }
+
+    public EvaluationComponent updateEvaluationComponent(Integer componentId, EvaluationComponent component) {
+        String url = supabaseUrl + "/rest/v1/evaluation_components?id=eq." + componentId;
+        String key = getEffectiveKey();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+        headers.set("Prefer", "return=representation");
+
+        HttpEntity<EvaluationComponent> entity = new HttpEntity<>(component, headers);
+
+        try {
+            ResponseEntity<EvaluationComponent[]> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.PATCH,
+                    entity,
+                    EvaluationComponent[].class
+            );
+
+            if (response.getBody() != null && response.getBody().length > 0) {
+                return response.getBody()[0];
+            }
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (PATCH): " + e.getResponseBodyAsString());
+            throw e;
+        }
+        return null;
+    }
+
+    public void deleteEvaluationComponent(Integer componentId) {
+        String url = supabaseUrl + "/rest/v1/evaluation_components?id=eq." + componentId;
+        String key = getEffectiveKey();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            restTemplate.exchange(
+                    url,
+                    HttpMethod.DELETE,
+                    entity,
+                    Void.class
+            );
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (DELETE): " + e.getResponseBodyAsString());
+            throw e;
+        }
+    }
+
+    private String getEffectiveKey() {
+        return (supabaseServiceRoleKey != null && !supabaseServiceRoleKey.isBlank()) 
+               ? supabaseServiceRoleKey 
+               : supabaseAnonKey;
     }
 }
