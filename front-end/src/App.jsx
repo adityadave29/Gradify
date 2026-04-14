@@ -8,6 +8,7 @@ import CreateCourse from './pages/admin-service/create-course'
 import AddCourseUsers from './pages/admin-service/add-course-users'
 import StudentHomepage from './pages/student/StudentHomepage'
 import ProfessorHomepage from './pages/professor/ProfessorHomepage'
+import ProfessorCourseEnrollments from './pages/professor/ProfessorCourseEnrollments'
 import { GuestOnly } from './components/GuestOnly'
 import { RequireAuth } from './components/RequireAuth'
 import { getUserRole, isAuthenticated } from './pages/auth/authStorage'
@@ -99,6 +100,14 @@ function App() {
           element={
             <RequireAuth allowedRole="PROFESSOR">
               <ProfessorHomepage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/professor/courses/:courseId/students"
+          element={
+            <RequireAuth allowedRole="PROFESSOR">
+              <ProfessorCourseEnrollments />
             </RequireAuth>
           }
         />

@@ -10,10 +10,6 @@ function ProfessorHomepage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const [selectedCourse, setSelectedCourse] = useState(null)
-  const [students, setStudents] = useState([])
-  const [loadingStudents, setLoadingStudents] = useState(false)
-
   useEffect(() => {
     if (!user?.id) return
 
@@ -38,18 +34,8 @@ function ProfessorHomepage() {
     navigate('/login', { replace: true })
   }
 
-  const handleViewStudents = async (course) => {
-    setSelectedCourse(course)
-    setLoadingStudents(true)
-    setStudents([])
-    try {
-      const response = await api.get(`/api/professor/courses/${course.id}/students`)
-      setStudents(response.data)
-    } catch (err) {
-      console.error('Failed to fetch students:', err)
-    } finally {
-      setLoadingStudents(false)
-    }
+  const handleViewStudents = (courseId) => {
+    navigate(`/professor/courses/${courseId}/students`)
   }
 
   return (
@@ -101,7 +87,7 @@ function ProfessorHomepage() {
                     <p className="mt-1 text-sm text-zinc-500">{course.course_code}</p>
                   </div>
                   <button
-                    onClick={() => handleViewStudents(course)}
+                    onClick={() => handleViewStudents(course.id)}
                     className="mt-6 rounded-lg bg-zinc-800 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-emerald-400"
                   >
                     View Enrolled Students
@@ -121,62 +107,6 @@ function ProfessorHomepage() {
             </div>
           )}
         </section>
-
-        {selectedCourse && (
-          <section className="mt-12 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="mb-6 flex items-center justify-between border-b border-zinc-800 pb-4">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setSelectedCourse(null)}
-                  className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                </button>
-                <div>
-                  <h2 className="text-xl font-semibold tracking-tight text-zinc-100">
-                    Students Enrolled: <span className="text-emerald-400">{selectedCourse.course_name}</span>
-                  </h2>
-                  <p className="text-xs text-zinc-500">{selectedCourse.course_code}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
-              <table className="w-full text-left text-sm text-zinc-300">
-                <thead className="bg-zinc-800/50 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  <tr>
-                    <th className="px-6 py-4">Student Name</th>
-                    <th className="px-6 py-4">Email</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800">
-                  {loadingStudents ? (
-                    <tr>
-                      <td colSpan="2" className="px-6 py-10 text-center text-zinc-500">
-                        Fetching enrollment list...
-                      </td>
-                    </tr>
-                  ) : students.length > 0 ? (
-                    students.map((student, idx) => (
-                      <tr key={idx} className="transition hover:bg-zinc-800/30">
-                        <td className="px-6 py-4 font-medium text-zinc-200">{student.name}</td>
-                        <td className="px-6 py-4 text-zinc-400">{student.email}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="2" className="px-6 py-10 text-center text-zinc-500">
-                        No students enrolled in this course yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
       </div>
     </div>
   )

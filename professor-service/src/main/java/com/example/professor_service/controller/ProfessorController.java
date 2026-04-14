@@ -26,4 +26,9 @@ public class ProfessorController {
     public List<StudentDTO> getStudents(@PathVariable Integer courseId) {
         return professorService.getEnrolledStudents(courseId);
     }
+
+    @GetMapping("/courses/{courseId}")
+    public Course getCourse(@PathVariable Integer courseId) {
+        return professorService.getCourseByCourseId(courseId);
+    }
 }

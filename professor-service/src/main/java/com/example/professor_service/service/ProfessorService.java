@@ -86,4 +86,30 @@ public class ProfessorService {
         }
         return List.of();
     }
+
+    public Course getCourseByCourseId(Integer courseId) {
+        String url = supabaseUrl + "/rest/v1/courses?id=eq." + courseId + "&select=*";
+
+        String key = (supabaseServiceRoleKey != null && !supabaseServiceRoleKey.isBlank()) 
+                     ? supabaseServiceRoleKey 
+                     : supabaseAnonKey;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<Course[]> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                Course[].class
+        );
+
+        if (response.getBody() != null && response.getBody().length > 0) {
+            return response.getBody()[0];
+        }
+        return null;
+    }
 }
