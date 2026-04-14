@@ -127,6 +127,20 @@ function ProfessorCourseComponents() {
               <p className="text-sm text-zinc-500">{course?.course_code}</p>
             </div>
           </div>
+
+          <div className="flex items-center gap-1 rounded-xl bg-zinc-900 p-1 border border-zinc-800">
+            <button
+              onClick={() => navigate(`/professor/courses/${courseId}/students`)}
+              className="rounded-lg px-4 py-2 text-xs font-medium text-zinc-500 transition hover:text-zinc-300"
+            >
+              Students
+            </button>
+            <button
+              className="rounded-lg bg-zinc-800 px-4 py-2 text-xs font-semibold text-zinc-100 shadow-sm"
+            >
+              Evaluation Components
+            </button>
+          </div>
         </div>
 
         {loading ? (

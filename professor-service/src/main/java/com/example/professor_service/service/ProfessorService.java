@@ -2,6 +2,7 @@ package com.example.professor_service.service;
 
 import com.example.professor_service.model.Course;
 import com.example.professor_service.model.EvaluationComponent;
+import com.example.professor_service.model.Mark;
 import com.example.professor_service.model.StudentDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -58,7 +59,7 @@ public class ProfessorService {
     }
 
     public List<StudentDTO> getEnrolledStudents(Integer courseId) {
-        String url = supabaseUrl + "/rest/v1/enrollments?course_id=eq." + courseId + "&select=student:users(name,email)";
+        String url = supabaseUrl + "/rest/v1/enrollments?course_id=eq." + courseId + "&select=student:users(id,name,email)";
 
         // Use service_role key if provided to bypass RLS, fallback to anon key
         String key = (supabaseServiceRoleKey != null && !supabaseServiceRoleKey.isBlank()) 
@@ -71,20 +72,24 @@ public class ProfessorService {
 
         HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-        ResponseEntity<Map[]> response = restTemplate.exchange(
-                url,
-                HttpMethod.GET,
-                entity,
-                Map[].class
-        );
+        try {
+            ResponseEntity<Map[]> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    Map[].class
+            );
 
-        if (response.getBody() != null) {
-            return Arrays.stream(response.getBody())
-                    .map(item -> {
-                        Map<String, String> studentMap = (Map<String, String>) item.get("student");
-                        return new StudentDTO(studentMap.get("name"), studentMap.get("email"));
-                    })
-                    .collect(Collectors.toList());
+            if (response.getBody() != null) {
+                return Arrays.stream(response.getBody())
+                        .map(item -> {
+                            Map<String, String> studentMap = (Map<String, String>) item.get("student");
+                            return new StudentDTO(studentMap.get("id"), studentMap.get("name"), studentMap.get("email"));
+                        })
+                        .collect(Collectors.toList());
+            }
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (GET Students): " + e.getResponseBodyAsString());
         }
         return List.of();
     }
@@ -217,6 +222,119 @@ public class ProfessorService {
             System.err.println("Supabase Error (DELETE): " + e.getResponseBodyAsString());
             throw e;
         }
+    }
+
+    public List<Mark> getMarksByComponent(Integer componentId) {
+        String url = supabaseUrl + "/rest/v1/marks?component_id=eq." + componentId + "&select=*";
+        String key = getEffectiveKey();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<Mark[]> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    Mark[].class
+            );
+
+            if (response.getBody() != null) {
+                return Arrays.asList(response.getBody());
+            }
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (GET Marks): " + e.getResponseBodyAsString());
+        }
+        return List.of();
+    }
+
+    public List<Mark> saveMarksBulk(List<Mark> marks) {
+        String url = supabaseUrl + "/rest/v1/marks?on_conflict=student_id,course_id,component_id";
+        String key = getEffectiveKey();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+        // resolution=merge-duplicates acts as UPSERT in Supabase/PostgREST
+        headers.set("Prefer", "return=representation,resolution=merge-duplicates");
+
+        HttpEntity<List<Mark>> entity = new HttpEntity<>(marks, headers);
+
+        try {
+            ResponseEntity<Mark[]> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    Mark[].class
+            );
+
+            if (response.getBody() != null) {
+                return Arrays.asList(response.getBody());
+            }
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (BULK POST Marks): " + e.getResponseBodyAsString());
+            throw e;
+        }
+        return List.of();
+    }
+
+    public List<Mark> getMarksByCourse(Integer courseId) {
+        String url = supabaseUrl + "/rest/v1/marks?course_id=eq." + courseId + "&select=*";
+        String key = getEffectiveKey();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<Mark[]> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    Mark[].class
+            );
+
+            if (response.getBody() != null) {
+                return Arrays.asList(response.getBody());
+            }
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (GET Course Marks): " + e.getResponseBodyAsString());
+        }
+        return List.of();
+    }
+
+    public List<EvaluationComponent> saveEvaluationComponentsBulk(List<EvaluationComponent> components) {
+        String url = supabaseUrl + "/rest/v1/evaluation_components";
+        String key = getEffectiveKey();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+        headers.set("Prefer", "return=representation,resolution=merge-duplicates");
+
+        HttpEntity<List<EvaluationComponent>> entity = new HttpEntity<>(components, headers);
+
+        try {
+            ResponseEntity<EvaluationComponent[]> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    EvaluationComponent[].class
+            );
+
+            if (response.getBody() != null) {
+                return Arrays.asList(response.getBody());
+            }
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (BULK POST Components): " + e.getResponseBodyAsString());
+            throw e;
+        }
+        return List.of();
     }
 
     private String getEffectiveKey() {

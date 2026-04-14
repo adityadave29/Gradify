@@ -10,19 +10,20 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class EvaluationComponent {
+public class Mark {
     private Integer id;
+
+    @JsonProperty("student_id")
+    private String studentId;
 
     @JsonProperty("course_id")
     private Integer courseId;
 
-    @JsonProperty("component_name")
-    private String componentName;
+    @JsonProperty("component_id")
+    private Integer componentId;
 
-    private Integer weightage;
-    
-    @JsonProperty("max_marks")
-    private Integer maxMarks;
+    @JsonProperty("marks_obtained")
+    private Double marksObtained;
 
     @JsonProperty("created_at")
     private String createdAt;
