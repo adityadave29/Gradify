@@ -26,6 +26,8 @@ function Login() {
         console.log('Login — expires_in:', body.expires_in)
         console.log('Login — token_type:', body.token_type)
         console.log('Login — user:', body.user)
+        console.log('Login — role:', body.role)
+        console.log('Login — debug_version:', body.debug_version)
       }
 
       saveSession(body)
@@ -38,8 +40,16 @@ function Login() {
         return
       }
 
-      setMessage('Login request sent successfully')
-      navigate('/admin-service')
+      const role = (body.role || '').toUpperCase()
+      if (role === 'ADMIN') {
+        navigate('/admin-service')
+      } else if (role === 'PROFESSOR') {
+        navigate('/professor')
+      } else if (role === 'STUDENT') {
+        navigate('/student')
+      } else {
+        navigate('/')
+      }
     } catch (error) {
       setMessage(
         error.response?.data?.error ||

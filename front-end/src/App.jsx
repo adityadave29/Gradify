@@ -6,24 +6,23 @@ import CreateUser from './pages/admin-service/create-user'
 import CreateUserDetails from './pages/admin-service/create-user-details'
 import CreateCourse from './pages/admin-service/create-course'
 import AddCourseUsers from './pages/admin-service/add-course-users'
+import StudentHomepage from './pages/student/StudentHomepage'
+import ProfessorHomepage from './pages/professor/ProfessorHomepage'
 import { GuestOnly } from './components/GuestOnly'
 import { RequireAuth } from './components/RequireAuth'
-import { isAuthenticated } from './pages/auth/authStorage'
+import { getUserRole, isAuthenticated } from './pages/auth/authStorage'
 
 function RootRedirect() {
-  return isAuthenticated() ? (
-    <Navigate to="/admin-service" replace />
-  ) : (
-    <Navigate to="/login" replace />
-  )
+  if (!isAuthenticated()) return <Navigate to="/login" replace />
+  const role = (getUserRole() || '').toUpperCase()
+  if (role === 'ADMIN') return <Navigate to="/admin-service" replace />
+  if (role === 'PROFESSOR') return <Navigate to="/professor" replace />
+  if (role === 'STUDENT') return <Navigate to="/student" replace />
+  return <Navigate to="/login" replace />
 }
 
 function NotFoundRedirect() {
-  return isAuthenticated() ? (
-    <Navigate to="/admin-service" replace />
-  ) : (
-    <Navigate to="/login" replace />
-  )
+  return <RootRedirect />
 }
 
 function App() {
@@ -42,7 +41,7 @@ function App() {
         <Route
           path="/admin"
           element={
-            <RequireAuth>
+            <RequireAuth allowedRole="ADMIN">
               <AdminHomePage />
             </RequireAuth>
           }
@@ -50,7 +49,7 @@ function App() {
         <Route
           path="/admin-service"
           element={
-            <RequireAuth>
+            <RequireAuth allowedRole="ADMIN">
               <AdminHomepage />
             </RequireAuth>
           }
@@ -58,7 +57,7 @@ function App() {
         <Route
           path="/admin-service/create-user"
           element={
-            <RequireAuth>
+            <RequireAuth allowedRole="ADMIN">
               <CreateUser />
             </RequireAuth>
           }
@@ -66,7 +65,7 @@ function App() {
         <Route
           path="/admin-service/create-user/details"
           element={
-            <RequireAuth>
+            <RequireAuth allowedRole="ADMIN">
               <CreateUserDetails />
             </RequireAuth>
           }
@@ -74,7 +73,7 @@ function App() {
         <Route
           path="/admin-service/create-course"
           element={
-            <RequireAuth>
+            <RequireAuth allowedRole="ADMIN">
               <CreateCourse />
             </RequireAuth>
           }
@@ -82,8 +81,24 @@ function App() {
         <Route
           path="/admin-service/courses/:courseId/users"
           element={
-            <RequireAuth>
+            <RequireAuth allowedRole="ADMIN">
               <AddCourseUsers />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/student"
+          element={
+            <RequireAuth allowedRole="STUDENT">
+              <StudentHomepage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/professor"
+          element={
+            <RequireAuth allowedRole="PROFESSOR">
+              <ProfessorHomepage />
             </RequireAuth>
           }
         />

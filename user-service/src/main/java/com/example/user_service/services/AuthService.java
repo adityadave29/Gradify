@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -78,10 +80,54 @@ public class AuthService {
         );
 
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-            return response.getBody();
+            ResponseEntity<Map> authResponse = restTemplate.postForEntity(url, entity, Map.class);
+            Map<String, Object> originalBody = authResponse.getBody();
+
+            // Reconstruct everything into a fresh LinkedHashMap to guarantee mutability
+            Map<String, Object> result = new java.util.LinkedHashMap<>();
+            if (originalBody != null) {
+                result.putAll(originalBody);
+            }
+
+            String role = fetchRole(request.getEmail());
+            result.put("role", role);
+            result.put("debug_version", "rbac-v2-force");
+
+            // Mirror role inside user metadata too for double-safety
+            if (result.get("user") instanceof Map userMap) {
+                Map<String, Object> userWithRole = new java.util.LinkedHashMap<>(userMap);
+                userWithRole.put("role", role);
+                result.put("user", userWithRole);
+            }
+
+            return result;
         } catch (HttpClientErrorException e) {
             throw new RuntimeException("Invalid email or password.");
         }
+    }
+
+    private String fetchRole(String email) {
+        String url = supabaseUrl + "/rest/v1/users?email=eq." + email + "&select=role";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", supabaseAnonKey);
+        headers.set("Authorization", "Bearer " + supabaseAnonKey);
+
+        try {
+            ResponseEntity<List> dbResponse = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    List.class
+            );
+
+            List<Map<String, Object>> rows = dbResponse.getBody();
+            if (rows != null && !rows.isEmpty()) {
+                return (String) rows.get(0).get("role");
+            }
+        } catch (Exception e) {
+            // Log or handle error
+        }
+        return "STUDENT"; // Default fallback
     }
 }
