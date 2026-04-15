@@ -7,6 +7,7 @@ import CreateUserDetails from './pages/admin-service/create-user-details'
 import CreateCourse from './pages/admin-service/create-course'
 import AddCourseUsers from './pages/admin-service/add-course-users'
 import StudentHomepage from './pages/student/StudentHomepage'
+import StudentCourseMarks from './pages/student/StudentCourseMarks'
 import ProfessorHomepage from './pages/professor/ProfessorHomepage'
 import ProfessorCourseEnrollments from './pages/professor/ProfessorCourseEnrollments'
 import ProfessorCourseComponents from './pages/professor/ProfessorCourseComponents'
@@ -94,6 +95,14 @@ function App() {
           element={
             <RequireAuth allowedRole="STUDENT">
               <StudentHomepage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/student/courses/:courseId/marks"
+          element={
+            <RequireAuth allowedRole="STUDENT">
+              <StudentCourseMarks />
             </RequireAuth>
           }
         />

@@ -1,6 +1,6 @@
 package com.example.student_service.service;
 
-import com.example.student_service.model.EnrolledCourse;
+import com.example.student_service.model.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -10,9 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,97 +31,141 @@ public class StudentService {
         this.restTemplate = restTemplate;
     }
 
-    /**
-     * Step 0 : Resolve the *public users table* ID from the student's email.
-     *          The Supabase Auth UUID stored in the browser differs from the
-     *          UUID that the admin service inserted into public.users.
-     * Step 1 : Fetch the course_id list from enrollments for that public UUID.
-     * Step 2 : Fetch full course details for those IDs.
-     */
     public List<EnrolledCourse> getEnrolledCourses(String email) {
         String key = getEffectiveKey();
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("apikey", key);
-        headers.set("Authorization", "Bearer " + key);
-        HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-        // ── Step 0: Resolve public user ID from email ─────────────────────────
-        String studentId;
+        HttpEntity<Void> entity = buildEntity(key);
+        String studentId = resolveStudentIdByEmail(email, entity);
+        if (studentId == null) return List.of();
+        List<Integer> courseIds = fetchCourseIds(studentId, entity);
+        if (courseIds.isEmpty()) return List.of();
+        String idList = courseIds.stream().map(String::valueOf).collect(Collectors.joining(","));
         try {
-            String userUrl = supabaseUrl
-                    + "/rest/v1/users?email=eq." + email
-                    + "&select=id";
-
-            ResponseEntity<Map[]> userResp = restTemplate.exchange(
-                    userUrl, HttpMethod.GET, entity, Map[].class
-            );
-
-            if (userResp.getBody() == null || userResp.getBody().length == 0) {
-                System.err.println("Student not found in public.users for email: " + email);
-                return List.of();
-            }
-            studentId = (String) userResp.getBody()[0].get("id");
-            System.out.println("Resolved student public ID: " + studentId + " for email: " + email);
-
-        } catch (HttpStatusCodeException e) {
-            System.err.println("Supabase Error (GET user by email): " + e.getResponseBodyAsString());
-            return List.of();
-        }
-
-        // ── Step 1: Get course_ids from enrollments for this student ──────────
-        List<Integer> courseIds;
-        try {
-            String enrollUrl = supabaseUrl
-                    + "/rest/v1/enrollments?student_id=eq." + studentId
-                    + "&select=course_id";
-
-            ResponseEntity<Map[]> enrollResp = restTemplate.exchange(
-                    enrollUrl, HttpMethod.GET, entity, Map[].class
-            );
-
-            if (enrollResp.getBody() == null || enrollResp.getBody().length == 0) {
-                System.out.println("No enrollments found for studentId: " + studentId);
-                return List.of();
-            }
-
-            courseIds = Arrays.stream(enrollResp.getBody())
-                    .map(row -> ((Number) row.get("course_id")).intValue())
-                    .collect(Collectors.toList());
-
-            System.out.println("Found course_ids: " + courseIds);
-
-        } catch (HttpStatusCodeException e) {
-            System.err.println("Supabase Error (GET enrollments): " + e.getResponseBodyAsString());
-            return List.of();
-        }
-
-        // ── Step 2: Fetch full course details for those IDs ───────────────────
-        String idList = courseIds.stream()
-                .map(String::valueOf)
-                .collect(Collectors.joining(","));
-
-        try {
-            String coursesUrl = supabaseUrl
-                    + "/rest/v1/courses?id=in.(" + idList + ")&select=*";
-
-            ResponseEntity<EnrolledCourse[]> coursesResp = restTemplate.exchange(
-                    coursesUrl, HttpMethod.GET, entity, EnrolledCourse[].class
-            );
-
-            if (coursesResp.getBody() != null) {
-                System.out.println("Returning " + coursesResp.getBody().length + " courses.");
-                return Arrays.asList(coursesResp.getBody());
-            }
+            String url = supabaseUrl + "/rest/v1/courses?id=in.(" + idList + ")&select=*";
+            ResponseEntity<EnrolledCourse[]> resp = restTemplate.exchange(url, HttpMethod.GET, entity, EnrolledCourse[].class);
+            if (resp.getBody() != null) return Arrays.asList(resp.getBody());
         } catch (HttpStatusCodeException e) {
             System.err.println("Supabase Error (GET courses): " + e.getResponseBodyAsString());
         }
-
         return List.of();
     }
 
+    public List<StudentRanking> getCourseRankings(Integer courseId, String currentEmail) {
+        String key = getEffectiveKey();
+        HttpEntity<Void> entity = buildEntity(key);
+        String currentStudentId = resolveStudentIdByEmail(currentEmail, entity);
+
+        List<EvaluationComponent> components = new ArrayList<>();
+        try {
+            String url = supabaseUrl + "/rest/v1/evaluation_components?course_id=eq." + courseId + "&select=*&order=created_at.asc";
+            ResponseEntity<EvaluationComponent[]> resp = restTemplate.exchange(url, HttpMethod.GET, entity, EvaluationComponent[].class);
+            if (resp.getBody() != null) components = Arrays.asList(resp.getBody());
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (GET components): " + e.getResponseBodyAsString());
+        }
+
+        List<Mark> marks = new ArrayList<>();
+        try {
+            String url = supabaseUrl + "/rest/v1/marks?course_id=eq." + courseId + "&select=*";
+            ResponseEntity<Mark[]> resp = restTemplate.exchange(url, HttpMethod.GET, entity, Mark[].class);
+            if (resp.getBody() != null) marks = Arrays.asList(resp.getBody());
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (GET marks): " + e.getResponseBodyAsString());
+        }
+
+        Map<String, String[]> studentInfo = new LinkedHashMap<>();
+        try {
+            String url = supabaseUrl + "/rest/v1/enrollments?course_id=eq." + courseId + "&select=student:users(id,name,email)";
+            ResponseEntity<Map[]> resp = restTemplate.exchange(url, HttpMethod.GET, entity, Map[].class);
+            if (resp.getBody() != null) {
+                for (Map<?, ?> row : resp.getBody()) {
+                    Map<String, Object> stu = (Map<String, Object>) row.get("student");
+                    if (stu != null) {
+                        studentInfo.put((String) stu.get("id"), new String[]{(String) stu.get("name"), (String) stu.get("email")});
+                    }
+                }
+            }
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (GET enrolled students): " + e.getResponseBodyAsString());
+        }
+
+        if (studentInfo.isEmpty()) return List.of();
+
+        Map<String, Map<Integer, Integer>> marksByStudent = new HashMap<>();
+        for (Mark m : marks) {
+            marksByStudent.computeIfAbsent(m.getStudentId(), k -> new HashMap<>()).put(m.getComponentId(), m.getMarksObtained());
+        }
+
+        int totalWeightage = components.stream().mapToInt(c -> c.getWeightage() != null ? c.getWeightage() : 0).sum();
+
+        List<StudentRanking> rankings = new ArrayList<>();
+        for (Map.Entry<String, String[]> entry : studentInfo.entrySet()) {
+            String sid = entry.getKey();
+            String[] info = entry.getValue();
+            Map<Integer, Integer> sm = marksByStudent.getOrDefault(sid, new HashMap<>());
+            List<ComponentMark> compMarks = new ArrayList<>();
+            double totalWeightedScore = 0.0;
+
+            for (EvaluationComponent comp : components) {
+                Integer obtainedRaw = sm.get(comp.getId());
+                double weightedContribution = 0.0;
+                
+                // Fallback to 100 if maxMarks is missing in DB
+                int max = (comp.getMaxMarks() != null && comp.getMaxMarks() > 0) ? comp.getMaxMarks() : 100;
+                
+                if (obtainedRaw != null && comp.getWeightage() != null) {
+                    weightedContribution = (obtainedRaw.doubleValue() / (double)max) * comp.getWeightage().doubleValue();
+                }
+                
+                totalWeightedScore += weightedContribution;
+                compMarks.add(new ComponentMark(comp.getId(), comp.getComponentName(), comp.getWeightage(), comp.getMaxMarks(), obtainedRaw, weightedContribution));
+            }
+
+            rankings.add(new StudentRanking(null, sid, info[0] != null ? info[0] : "Unknown", info[1], compMarks, totalWeightedScore, totalWeightage, sid.equals(currentStudentId)));
+        }
+
+        rankings.sort((a, b) -> Double.compare(b.getTotalWeightedScore(), a.getTotalWeightedScore()));
+        int rank = 1;
+        for (int i = 0; i < rankings.size(); i++) {
+            if (i > 0 && !rankings.get(i).getTotalWeightedScore().equals(rankings.get(i - 1).getTotalWeightedScore())) {
+                rank = i + 1;
+            }
+            rankings.get(i).setRank(rank);
+        }
+        return rankings;
+    }
+
+    private String resolveStudentIdByEmail(String email, HttpEntity<Void> entity) {
+        try {
+            String url = supabaseUrl + "/rest/v1/users?email=eq." + email + "&select=id";
+            ResponseEntity<Map[]> resp = restTemplate.exchange(url, HttpMethod.GET, entity, Map[].class);
+            if (resp.getBody() != null && resp.getBody().length > 0) return (String) resp.getBody()[0].get("id");
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (GET user by email): " + e.getResponseBodyAsString());
+        }
+        return null;
+    }
+
+    private List<Integer> fetchCourseIds(String studentId, HttpEntity<Void> entity) {
+        try {
+            String url = supabaseUrl + "/rest/v1/enrollments?student_id=eq." + studentId + "&select=course_id";
+            ResponseEntity<Map[]> resp = restTemplate.exchange(url, HttpMethod.GET, entity, Map[].class);
+            if (resp.getBody() != null && resp.getBody().length > 0) {
+                return Arrays.stream(resp.getBody()).map(r -> ((Number) r.get("course_id")).intValue()).collect(Collectors.toList());
+            }
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (GET enrollments): " + e.getResponseBodyAsString());
+        }
+        return List.of();
+    }
+
+    private HttpEntity<Void> buildEntity(String key) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+        return new HttpEntity<>(headers);
+    }
+
     private String getEffectiveKey() {
-        return (supabaseServiceRoleKey != null && !supabaseServiceRoleKey.isBlank())
-                ? supabaseServiceRoleKey
-                : supabaseAnonKey;
+        return (supabaseServiceRoleKey != null && !supabaseServiceRoleKey.isBlank()) ? supabaseServiceRoleKey : supabaseAnonKey;
     }
 }

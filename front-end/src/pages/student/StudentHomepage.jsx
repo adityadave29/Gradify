@@ -96,9 +96,22 @@ function StudentHomepage() {
                     <p className="mt-1 text-sm text-zinc-500">{course.course_code}</p>
                   </div>
 
-                  <div className="mt-6 flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-blue-400" />
-                    <span className="text-xs text-zinc-500">Enrolled</span>
+                  <div className="mt-6 flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-blue-400" />
+                      <span className="text-xs text-zinc-500">Enrolled</span>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/student/courses/${course.id}/marks`, {
+                        state: { courseName: course.course_name, courseCode: course.course_code }
+                      })}
+                      className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-zinc-800/50 py-2.5 text-xs font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-blue-400 border border-zinc-700/50"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      View Marks
+                    </button>
                   </div>
                 </div>
               ))}
