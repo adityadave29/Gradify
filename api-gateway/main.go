@@ -19,6 +19,7 @@ type config struct {
 	userService      *url.URL
 	adminService     *url.URL
 	professorService *url.URL
+	studentService   *url.URL
 	allowedOrigin    []string
 }
 
@@ -36,6 +37,7 @@ func main() {
 	mux.Handle("/api/auth/", withRequestLogging(withCORS(cfg.allowedOrigin, reverseProxy(cfg.userService))))
 	mux.Handle("/api/admin/", withRequestLogging(withCORS(cfg.allowedOrigin, reverseProxy(cfg.adminService))))
 	mux.Handle("/api/professor/", withRequestLogging(withCORS(cfg.allowedOrigin, reverseProxy(cfg.professorService))))
+	mux.Handle("/api/student/", withRequestLogging(withCORS(cfg.allowedOrigin, reverseProxy(cfg.studentService))))
 
 	// Nice error for unknown routes (helps frontend debugging).
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +60,8 @@ func main() {
 	log.Printf("api-gateway listening on %s", cfg.addr)
 	log.Printf("proxy /api/auth/* -> %s", cfg.userService.String())
 	log.Printf("proxy /api/admin/* -> %s", cfg.adminService.String())
+	log.Printf("proxy /api/professor/* -> %s", cfg.professorService.String())
+	log.Printf("proxy /api/student/* -> %s", cfg.studentService.String())
 
 	go func() {
 		if err := srv.Serve(l); err != nil && err != http.ErrServerClosed {
@@ -95,6 +99,12 @@ func mustLoadConfig() config {
 		log.Fatalf("invalid PROFESSOR_SERVICE_URL %q: %v", professorServiceURL, err)
 	}
 
+	studentServiceURL := envOr("STUDENT_SERVICE_URL", "http://localhost:8085")
+	s, err := url.Parse(studentServiceURL)
+	if err != nil {
+		log.Fatalf("invalid STUDENT_SERVICE_URL %q: %v", studentServiceURL, err)
+	}
+
 	allowed := envOr("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
 	allowedOrigins := splitCSV(allowed)
 
@@ -103,6 +113,7 @@ func mustLoadConfig() config {
 		userService:      u,
 		adminService:     a,
 		professorService: p,
+		studentService:   s,
 		allowedOrigin:    allowedOrigins,
 	}
 }
