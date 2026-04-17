@@ -14,6 +14,8 @@ function StudentCourseMarks() {
 
   const [rankings, setRankings] = useState([])
   const [distribution, setDistribution] = useState([])
+  const [courseStats, setCourseStats] = useState(null)
+  const [componentStats, setComponentStats] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -23,12 +25,16 @@ function StudentCourseMarks() {
     async function fetchRankings() {
       setLoading(true)
       try {
-        const [rankRes, distRes] = await Promise.all([
+        const [rankRes, distRes, statsRes, compStatsRes] = await Promise.all([
           api.get(`/api/student/courses/${courseId}/rankings?email=${encodeURIComponent(user.email)}`),
-          api.get(`/api/student/courses/${courseId}/grade-distribution`)
+          api.get(`/api/student/courses/${courseId}/grade-distribution`),
+          api.get(`/api/stats/courses/${courseId}`),
+          api.get(`/api/stats/courses/${courseId}/components`)
         ])
         setRankings(rankRes.data)
         setDistribution(distRes.data)
+        setCourseStats(statsRes.data)
+        setComponentStats(compStatsRes.data)
       } catch (err) {
         console.error('Failed to fetch data:', err)
         setError('Could not load marks. Please try again.')
@@ -97,18 +103,23 @@ function StudentCourseMarks() {
               <p className="mt-1 text-sm text-zinc-500">{courseCode} · Marks leaderboard (Weighted Score)</p>
             </div>
 
-            {rankings.length > 0 && (() => {
-              const me = rankings.find(r => r.is_current_user)
-              return me ? (
-                <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 px-5 py-3 text-center">
-                  <div className="text-2xl font-bold text-blue-400">{medalLabel(me.rank)}</div>
-                  <div className="mt-1 text-xs text-zinc-400">Your Rank</div>
-                  <div className="text-sm font-semibold text-zinc-100">
-                    {me.total_weighted_score?.toFixed(1)} / {me.total_weightage}
+            {/* Stats section instead of rank widget */}
+            {!loading && courseStats && (
+              <div className="flex items-center gap-6 rounded-2xl border border-zinc-800 bg-zinc-900/50 px-6 py-4 shadow-xl backdrop-blur-sm">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Class Average</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-blue-400">{courseStats.average_weighted_score?.toFixed(1)}</span>
+                    <span className="text-xs font-semibold text-zinc-600">/ {rankings[0]?.total_weightage}</span>
                   </div>
                 </div>
-              ) : null
-            })()}
+                <div className="h-10 w-px bg-zinc-800" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Students</span>
+                  <span className="text-2xl font-bold text-zinc-200">{courseStats.student_count}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -142,6 +153,11 @@ function StudentCourseMarks() {
                       <div className="mt-0.5 text-[10px] font-normal text-zinc-500 uppercase tracking-tight">
                         / {comp.max_marks || 100} ({comp.weightage} pts)
                       </div>
+                      {componentStats.find(s => s.component_id === comp.component_id) && (
+                        <div className="mt-1.5 inline-block rounded-md bg-zinc-800/80 px-1.5 py-0.5 text-[9px] font-bold text-blue-400 ring-1 ring-zinc-700/50">
+                          AVG: {componentStats.find(s => s.component_id === comp.component_id).average_marks.toFixed(1)}
+                        </div>
+                      )}
                     </th>
                   ))}
                   <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400">

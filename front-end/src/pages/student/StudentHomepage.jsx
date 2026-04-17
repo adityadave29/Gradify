@@ -7,26 +7,31 @@ function StudentHomepage() {
   const navigate = useNavigate()
   const user = getStoredUser()
   const [courses, setCourses] = useState([])
+  const [cgpa, setCgpa] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     if (!user?.id) return
 
-    async function fetchCourses() {
+    async function fetchData() {
       setLoading(true)
       try {
-        const response = await api.get(`/api/student/courses?email=${encodeURIComponent(user.email)}`)
-        setCourses(response.data)
+        const [coursesRes, cgpaRes] = await Promise.all([
+          api.get(`/api/student/courses?email=${encodeURIComponent(user.email)}`),
+          api.get(`/api/student/cgpa?email=${encodeURIComponent(user.email)}`)
+        ])
+        setCourses(coursesRes.data)
+        setCgpa(cgpaRes.data)
       } catch (err) {
-        console.error('Failed to fetch enrolled courses:', err)
-        setError('Could not load your courses. Please try again.')
+        console.error('Failed to fetch dashboard data:', err)
+        setError('Could not load your dashboard. Please try again.')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchCourses()
+    fetchData()
   }, [user?.id])
 
   const handleLogout = () => {
@@ -60,6 +65,27 @@ function StudentHomepage() {
             Log out
           </button>
         </nav>
+
+        {/* CGPA Display */}
+        {!loading && cgpa !== null && (
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-blue-500/20 bg-blue-500/5 p-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-blue-400">Expected CGPA</p>
+                <h2 className="mt-1 text-4xl font-bold text-zinc-100">{cgpa.toFixed(2)}</h2>
+              </div>
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/10 ring-4 ring-blue-500/5">
+                <svg className="h-8 w-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-green-500" />
+              <p className="text-xs text-zinc-400">Based on relative grading across {courses.length} courses</p>
+            </div>
+          </div>
+        )}
 
         {/* My Courses section */}
         <section className="w-full">

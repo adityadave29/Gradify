@@ -30,6 +30,8 @@ public class StudentRanking {
     @JsonProperty("total_weightage")
     private Integer totalWeightage;
 
+    private String grade;
+
     @JsonProperty("is_current_user")
     private Boolean isCurrentUser;
 }

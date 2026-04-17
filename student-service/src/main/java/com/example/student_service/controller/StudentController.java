@@ -39,4 +39,9 @@ public class StudentController {
     public List<GradeDistribution> getGradeDistribution(@PathVariable Integer courseId) {
         return studentService.getGradeDistribution(courseId);
     }
+
+    @GetMapping("/cgpa")
+    public Double getStudentCGPA(@RequestParam String email) {
+        return studentService.getStudentCGPA(email);
+    }
 }

@@ -16,6 +16,16 @@ import java.util.stream.Collectors;
 @Service
 public class StudentService {
 
+    private static final Map<String, Double> GRADE_POINTS = new HashMap<>() {{
+        put("A", 4.0);
+        put("A-", 3.7);
+        put("B+", 3.4);
+        put("B", 3.0);
+        put("B-", 2.7);
+        put("C+", 2.3);
+        put("C", 2.0);
+    }};
+
     private final RestTemplate restTemplate;
 
     @Value("${supabase.url}")
@@ -120,7 +130,7 @@ public class StudentService {
                 compMarks.add(new ComponentMark(comp.getId(), comp.getComponentName(), comp.getWeightage(), comp.getMaxMarks(), obtainedRaw, weightedContribution));
             }
 
-            rankings.add(new StudentRanking(null, sid, info[0] != null ? info[0] : "Unknown", info[1], compMarks, totalWeightedScore, totalWeightage, sid.equals(currentStudentId)));
+            rankings.add(new StudentRanking(null, sid, info[0] != null ? info[0] : "Unknown", info[1], compMarks, totalWeightedScore, totalWeightage, null, sid.equals(currentStudentId)));
         }
 
         rankings.sort((a, b) -> Double.compare(b.getTotalWeightedScore(), a.getTotalWeightedScore()));
@@ -131,7 +141,62 @@ public class StudentService {
             }
             rankings.get(i).setRank(rank);
         }
+
+        assignGradesToRankings(rankings, courseId);
+
         return rankings;
+    }
+
+    private void assignGradesToRankings(List<StudentRanking> rankings, Integer courseId) {
+        List<GradeDistribution> distributions = getGradeDistribution(courseId);
+        if (distributions.isEmpty() || rankings.isEmpty()) return;
+
+        // Sort distributions: A, A-, B+, B, B-, C+, C
+        List<String> gradeOrder = Arrays.asList("A", "A-", "B+", "B", "B-", "C+", "C");
+        distributions.sort(Comparator.comparingInt(d -> {
+            int idx = gradeOrder.indexOf(d.getGrade());
+            return idx == -1 ? 99 : idx;
+        }));
+
+        int totalStudents = rankings.size();
+        int currentRankIndex = 0;
+
+        for (GradeDistribution dist : distributions) {
+            int countForThisGrade = (int) Math.round((dist.getPercentage() / 100.0) * totalStudents);
+            for (int i = 0; i < countForThisGrade && currentRankIndex < totalStudents; i++) {
+                rankings.get(currentRankIndex).setGrade(dist.getGrade());
+                currentRankIndex++;
+            }
+        }
+
+        // Assign default grade (C or D/Pass) to remaining students if distribution didn't cover all
+        while (currentRankIndex < totalStudents) {
+            rankings.get(currentRankIndex).setGrade("C");
+            currentRankIndex++;
+        }
+    }
+
+    public Double getStudentCGPA(String email) {
+        List<EnrolledCourse> courses = getEnrolledCourses(email);
+        if (courses.isEmpty()) return 0.0;
+
+        double totalPoints = 0.0;
+        int gradedCourses = 0;
+
+        for (EnrolledCourse course : courses) {
+            List<StudentRanking> rankings = getCourseRankings(course.getId(), email);
+            Optional<StudentRanking> currentStudent = rankings.stream()
+                    .filter(StudentRanking::getIsCurrentUser)
+                    .findFirst();
+
+            if (currentStudent.isPresent() && currentStudent.get().getGrade() != null) {
+                Double points = GRADE_POINTS.getOrDefault(currentStudent.get().getGrade(), 1.5); // Fallback to 1.5 for anything else
+                totalPoints += points;
+                gradedCourses++;
+            }
+        }
+
+        return gradedCourses > 0 ? totalPoints / gradedCourses : 0.0;
     }
 
     public List<GradeDistribution> getGradeDistribution(Integer courseId) {
