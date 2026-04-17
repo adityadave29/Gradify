@@ -1,6 +1,7 @@
 package com.example.student_service.controller;
 
 import com.example.student_service.model.EnrolledCourse;
+import com.example.student_service.model.GradeDistribution;
 import com.example.student_service.model.StudentRanking;
 import com.example.student_service.service.StudentService;
 import org.springframework.web.bind.annotation.*;
@@ -32,5 +33,10 @@ public class StudentController {
             @PathVariable Integer courseId,
             @RequestParam String email) {
         return studentService.getCourseRankings(courseId, email);
+    }
+
+    @GetMapping("/courses/{courseId}/grade-distribution")
+    public List<GradeDistribution> getGradeDistribution(@PathVariable Integer courseId) {
+        return studentService.getGradeDistribution(courseId);
     }
 }

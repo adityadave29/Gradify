@@ -134,6 +134,19 @@ public class StudentService {
         return rankings;
     }
 
+    public List<GradeDistribution> getGradeDistribution(Integer courseId) {
+        String key = getEffectiveKey();
+        HttpEntity<Void> entity = buildEntity(key);
+        try {
+            String url = supabaseUrl + "/rest/v1/grade_distribution?course_id=eq." + courseId + "&select=*";
+            ResponseEntity<GradeDistribution[]> resp = restTemplate.exchange(url, HttpMethod.GET, entity, GradeDistribution[].class);
+            if (resp.getBody() != null) return Arrays.asList(resp.getBody());
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (GET grade distribution): " + e.getResponseBodyAsString());
+        }
+        return List.of();
+    }
+
     private String resolveStudentIdByEmail(String email, HttpEntity<Void> entity) {
         try {
             String url = supabaseUrl + "/rest/v1/users?email=eq." + email + "&select=id";

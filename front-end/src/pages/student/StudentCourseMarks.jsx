@@ -13,6 +13,7 @@ function StudentCourseMarks() {
   const courseCode = location.state?.courseCode || ''
 
   const [rankings, setRankings] = useState([])
+  const [distribution, setDistribution] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -22,12 +23,14 @@ function StudentCourseMarks() {
     async function fetchRankings() {
       setLoading(true)
       try {
-        const res = await api.get(
-          `/api/student/courses/${courseId}/rankings?email=${encodeURIComponent(user.email)}`
-        )
-        setRankings(res.data)
+        const [rankRes, distRes] = await Promise.all([
+          api.get(`/api/student/courses/${courseId}/rankings?email=${encodeURIComponent(user.email)}`),
+          api.get(`/api/student/courses/${courseId}/grade-distribution`)
+        ])
+        setRankings(rankRes.data)
+        setDistribution(distRes.data)
       } catch (err) {
-        console.error('Failed to fetch rankings:', err)
+        console.error('Failed to fetch data:', err)
         setError('Could not load marks. Please try again.')
       } finally {
         setLoading(false)
@@ -42,6 +45,28 @@ function StudentCourseMarks() {
     if (rank === 2) return '🥈'
     if (rank === 3) return '🥉'
     return `#${rank}`
+  }
+
+  const getExpectedGrade = (idx) => {
+    if (!distribution || distribution.length === 0) return null
+    
+    // Sort distribution by standard grade order
+    const order = ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'D']
+    const sortedDist = [...distribution]
+      .filter(d => d.percentage > 0)
+      .sort((a, b) => order.indexOf(a.grade) - order.indexOf(b.grade))
+
+    if (sortedDist.length === 0) return null
+
+    let accumulatedSlots = 0
+    for (const d of sortedDist) {
+      const slots = Math.round((d.percentage / 100) * rankings.length)
+      accumulatedSlots += slots
+      if (idx < accumulatedSlots) return d.grade
+    }
+    
+    // Default to last defined grade if rounding leaves anyone out
+    return sortedDist[sortedDist.length - 1].grade
   }
 
   // Derive component columns from first ranking row
@@ -122,6 +147,9 @@ function StudentCourseMarks() {
                   <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400">
                     Course Total
                     <span className="ml-1 font-normal text-zinc-600">/ {rankings[0]?.total_weightage}</span>
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                    Expected Grade
                   </th>
                 </tr>
               </thead>
@@ -207,6 +235,23 @@ function StudentCourseMarks() {
                           {row.total_weighted_score?.toFixed(1)}
                         </span>
                         <span className="text-zinc-600 ml-1"> / {row.total_weightage}</span>
+                      </td>
+
+                      {/* Grade */}
+                      <td className="px-4 py-3 text-center">
+                        {getExpectedGrade(idx) ? (
+                          <span className={[
+                            'inline-flex items-center justify-center rounded-lg px-3 py-1 text-xs font-bold ring-1 ring-inset',
+                            getExpectedGrade(idx).startsWith('A') ? 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20' :
+                            getExpectedGrade(idx).startsWith('B') ? 'bg-blue-500/10 text-blue-400 ring-blue-500/20' :
+                            getExpectedGrade(idx).startsWith('C') ? 'bg-amber-500/10 text-amber-400 ring-amber-500/20' :
+                            'bg-zinc-500/10 text-zinc-400 ring-zinc-500/20'
+                          ].join(' ')}>
+                            {getExpectedGrade(idx)}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-600">—</span>
+                        )}
                       </td>
                     </tr>
                   )

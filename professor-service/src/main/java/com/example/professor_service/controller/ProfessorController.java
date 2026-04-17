@@ -2,6 +2,7 @@ package com.example.professor_service.controller;
 
 import com.example.professor_service.model.Course;
 import com.example.professor_service.model.EvaluationComponent;
+import com.example.professor_service.model.GradeDistribution;
 import com.example.professor_service.model.Mark;
 import com.example.professor_service.model.StudentDTO;
 import com.example.professor_service.service.ProfessorService;
@@ -74,5 +75,16 @@ public class ProfessorController {
     public List<EvaluationComponent> saveComponentsBulk(@PathVariable Integer courseId, @RequestBody List<EvaluationComponent> components) {
         components.forEach(c -> c.setCourseId(courseId));
         return professorService.saveEvaluationComponentsBulk(components);
+    }
+
+    @GetMapping("/courses/{courseId}/grade-distribution")
+    public List<GradeDistribution> getGradeDistribution(@PathVariable Integer courseId) {
+        return professorService.getGradeDistribution(courseId);
+    }
+
+    @PostMapping("/courses/{courseId}/grade-distribution")
+    public List<GradeDistribution> saveGradeDistribution(@PathVariable Integer courseId, @RequestBody List<GradeDistribution> distributions) {
+        distributions.forEach(d -> d.setCourseId(courseId));
+        return professorService.saveGradeDistributionBulk(distributions);
     }
 }

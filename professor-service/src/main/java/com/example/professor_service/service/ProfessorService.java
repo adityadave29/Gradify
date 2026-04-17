@@ -2,6 +2,7 @@ package com.example.professor_service.service;
 
 import com.example.professor_service.model.Course;
 import com.example.professor_service.model.EvaluationComponent;
+import com.example.professor_service.model.GradeDistribution;
 import com.example.professor_service.model.Mark;
 import com.example.professor_service.model.StudentDTO;
 import org.springframework.beans.factory.annotation.Value;
@@ -332,6 +333,92 @@ public class ProfessorService {
             }
         } catch (HttpStatusCodeException e) {
             System.err.println("Supabase Error (BULK POST Components): " + e.getResponseBodyAsString());
+            throw e;
+        }
+        return List.of();
+    }
+
+    public List<GradeDistribution> getGradeDistribution(Integer courseId) {
+        String url = supabaseUrl + "/rest/v1/grade_distribution?course_id=eq." + courseId + "&select=*";
+        String key = getEffectiveKey();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<GradeDistribution[]> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    GradeDistribution[].class
+            );
+
+            if (response.getBody() != null) {
+                return Arrays.asList(response.getBody());
+            }
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (GET Grade Distribution): " + e.getResponseBodyAsString());
+        }
+        return List.of();
+    }
+
+    public void deleteGradeDistributionForCourse(Integer courseId) {
+        String url = supabaseUrl + "/rest/v1/grade_distribution?course_id=eq." + courseId;
+        String key = getEffectiveKey();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            restTemplate.exchange(
+                    url,
+                    HttpMethod.DELETE,
+                    entity,
+                    Void.class
+            );
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (DELETE Grade Distribution): " + e.getResponseBodyAsString());
+        }
+    }
+
+    public List<GradeDistribution> saveGradeDistributionBulk(List<GradeDistribution> distributions) {
+        if (distributions.isEmpty()) return List.of();
+        
+        Integer courseId = distributions.get(0).getCourseId();
+        
+        // First, clear existing distribution for this course
+        deleteGradeDistributionForCourse(courseId);
+
+        // Then insert new ones
+        String url = supabaseUrl + "/rest/v1/grade_distribution";
+        String key = getEffectiveKey();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", key);
+        headers.set("Authorization", "Bearer " + key);
+        headers.set("Prefer", "return=representation");
+
+        HttpEntity<List<GradeDistribution>> entity = new HttpEntity<>(distributions, headers);
+
+        try {
+            ResponseEntity<GradeDistribution[]> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    GradeDistribution[].class
+            );
+
+            if (response.getBody() != null) {
+                return Arrays.asList(response.getBody());
+            }
+        } catch (HttpStatusCodeException e) {
+            System.err.println("Supabase Error (BULK POST Grade Distribution): " + e.getResponseBodyAsString());
             throw e;
         }
         return List.of();

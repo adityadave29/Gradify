@@ -12,6 +12,7 @@ import ProfessorHomepage from './pages/professor/ProfessorHomepage'
 import ProfessorCourseEnrollments from './pages/professor/ProfessorCourseEnrollments'
 import ProfessorCourseComponents from './pages/professor/ProfessorCourseComponents'
 import ProfessorCourseGrading from './pages/professor/ProfessorCourseGrading'
+import ProfessorGradeDistribution from './pages/professor/ProfessorGradeDistribution'
 import { GuestOnly } from './components/GuestOnly'
 import { RequireAuth } from './components/RequireAuth'
 import { getUserRole, isAuthenticated } from './pages/auth/authStorage'
@@ -135,6 +136,14 @@ function App() {
           element={
             <RequireAuth allowedRole="PROFESSOR">
               <ProfessorCourseGrading />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/professor/courses/:courseId/grades"
+          element={
+            <RequireAuth allowedRole="PROFESSOR">
+              <ProfessorGradeDistribution />
             </RequireAuth>
           }
         />
