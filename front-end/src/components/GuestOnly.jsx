@@ -1,7 +1,8 @@
 import { Navigate } from 'react-router-dom'
-import { isAuthenticated } from '../pages/auth/authStorage'
+import { getUserRole, isAuthenticated } from '../pages/auth/authStorage'
 
 export function GuestOnly({ children }) {
-  if (isAuthenticated()) return <Navigate to="/admin" replace />
+  // Only redirect to dashboard if they are authenticated AND have a role
+  if (isAuthenticated() && getUserRole()) return <Navigate to="/" replace />
   return children
 }

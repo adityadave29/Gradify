@@ -15,9 +15,13 @@ import (
 )
 
 type config struct {
-	addr          string
-	userService   *url.URL
-	allowedOrigin []string
+	addr             string
+	userService      *url.URL
+	adminService     *url.URL
+	professorService *url.URL
+	studentService   *url.URL
+	statsService     *url.URL
+	allowedOrigin    []string
 }
 
 func main() {
@@ -32,6 +36,10 @@ func main() {
 
 	// Routes
 	mux.Handle("/api/auth/", withRequestLogging(withCORS(cfg.allowedOrigin, reverseProxy(cfg.userService))))
+	mux.Handle("/api/admin/", withRequestLogging(withCORS(cfg.allowedOrigin, reverseProxy(cfg.adminService))))
+	mux.Handle("/api/professor/", withRequestLogging(withCORS(cfg.allowedOrigin, reverseProxy(cfg.professorService))))
+	mux.Handle("/api/student/", withRequestLogging(withCORS(cfg.allowedOrigin, reverseProxy(cfg.studentService))))
+	mux.Handle("/api/stats/", withRequestLogging(withCORS(cfg.allowedOrigin, reverseProxy(cfg.statsService))))
 
 	// Nice error for unknown routes (helps frontend debugging).
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +61,10 @@ func main() {
 
 	log.Printf("api-gateway listening on %s", cfg.addr)
 	log.Printf("proxy /api/auth/* -> %s", cfg.userService.String())
+	log.Printf("proxy /api/admin/* -> %s", cfg.adminService.String())
+	log.Printf("proxy /api/professor/* -> %s", cfg.professorService.String())
+	log.Printf("proxy /api/student/* -> %s", cfg.studentService.String())
+	log.Printf("proxy /api/stats/* -> %s", cfg.statsService.String())
 
 	go func() {
 		if err := srv.Serve(l); err != nil && err != http.ErrServerClosed {
@@ -78,13 +90,41 @@ func mustLoadConfig() config {
 		log.Fatalf("invalid USER_SERVICE_URL %q: %v", userServiceURL, err)
 	}
 
+	adminServiceURL := envOr("ADMIN_SERVICE_URL", "http://localhost:8083")
+	a, err := url.Parse(adminServiceURL)
+	if err != nil {
+		log.Fatalf("invalid ADMIN_SERVICE_URL %q: %v", adminServiceURL, err)
+	}
+
+	professorServiceURL := envOr("PROFESSOR_SERVICE_URL", "http://localhost:8084")
+	p, err := url.Parse(professorServiceURL)
+	if err != nil {
+		log.Fatalf("invalid PROFESSOR_SERVICE_URL %q: %v", professorServiceURL, err)
+	}
+
+	studentServiceURL := envOr("STUDENT_SERVICE_URL", "http://localhost:8085")
+	s, err := url.Parse(studentServiceURL)
+	if err != nil {
+		log.Fatalf("invalid STUDENT_SERVICE_URL %q: %v", studentServiceURL, err)
+	}
+
+	statsServiceURL := envOr("STATS_SERVICE_URL", "http://localhost:8086")
+	st, err := url.Parse(statsServiceURL)
+	if err != nil {
+		log.Fatalf("invalid STATS_SERVICE_URL %q: %v", statsServiceURL, err)
+	}
+
 	allowed := envOr("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
 	allowedOrigins := splitCSV(allowed)
 
 	return config{
-		addr:          addr,
-		userService:   u,
-		allowedOrigin: allowedOrigins,
+		addr:             addr,
+		userService:      u,
+		adminService:     a,
+		professorService: p,
+		studentService:   s,
+		statsService:     st,
+		allowedOrigin:    allowedOrigins,
 	}
 }
 
