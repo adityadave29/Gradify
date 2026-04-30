@@ -1,0 +1,9 @@
+target/
+.idea/
+.vscode/
+.git/
+*.log
+.mvn/wrapper/maven-wrapper.jar
+!mvnw
+!mvnw.cmd
+!.mvn/wrapper/maven-wrapper.properties
