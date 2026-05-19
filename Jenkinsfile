@@ -1,32 +1,87 @@
 pipeline {
     agent any
-
+    // comment added for poll SCM
     environment {
-        // Docker Hub credentials should be stored in Jenkins with this ID
-        DOCKERHUB_CRED = 'dockerhub-credentials'
-        DOCKER_USER = 'key717'
-        EMAIL_RECIPIENT = 'keyworkmail2@gmail.com'
+        DOCKERHUB_CRED = 'docker-creds'
+        DOCKER_USER = 'adityadave29'
+        EMAIL_RECIPIENT = 'daveadityan2004@gmail.com'
+        PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/local/go/bin:/usr/bin:/bin:/usr/sbin:/sbin:${env.PATH}"
+        
+        // This will store the list of services that actually changed
+        CHANGED_SERVICES = ""
+        SERVICES_TO_BUILD = ""
     }
 
     stages {
-        stage('Checkout') {
-    steps {
-        checkout([
-            $class: 'GitSCM',
-            branches: [[name: '*/master']],
-            userRemoteConfigs: [[
-                url: 'https://github.com/adityadave29/Gradify.git'
-            ]],
-            extensions: [
-                [$class: 'CloneOption',
-                    shallow: true,
-                    depth: 1,
-                    noTags: true
-                ]
-            ]
-        ])
-    }
-}
+        stage('Detect Changes') {
+            steps {
+                script {
+                    echo "Starting Microservice Change Detection..."
+                    def changedFiles = []
+                    
+                    currentBuild.changeSets.each { changeLogSet ->
+                        changeLogSet.items.each { entry ->
+                            entry.affectedFiles.each { file ->
+                                def path = file.path.toString()
+                                echo "DEBUG-DETECTION-NEW: Detected file change: ${path}"
+                                changedFiles.add(path)
+                            }
+                        }
+                    }
+                    
+                    def allServices = ['admin-service', 'professor-service', 'student-service', 'user-service', 'api-gateway', 'stats-service', 'front-end']
+                    def matchedServices = []
+                    
+                    if (changedFiles.isEmpty()) {
+                        echo "No changesets found. Defaulting to FULL BUILD."
+                        matchedServices = allServices
+                    } else {
+                        def hasGlobal = false
+                        for (f in changedFiles) {
+                            if (f == "Jenkinsfile" || f.startsWith("k8s/") || f.startsWith("ansible/") || !f.contains("/")) {
+                                hasGlobal = true
+                                break
+                            }
+                        }
+                        
+                        if (hasGlobal) {
+                            echo "Global change detected. Building ALL."
+                            matchedServices = allServices
+                        } else {
+                            for (svc in allServices) {
+                                for (f in changedFiles) {
+                                    if (f.startsWith(svc + "/")) {
+                                        echo "MATCH FOUND: ${svc}"
+                                        matchedServices.add(svc)
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (matchedServices.isEmpty() && !changedFiles.isEmpty()) {
+                        echo "Unknown changes. Falling back to FULL BUILD."
+                        matchedServices = allServices
+                    }
+                    
+                    // Manually build the comma-separated string for maximum compatibility
+                    def uniqueList = matchedServices.unique()
+                    def finalString = ""
+                    for (int i = 0; i < uniqueList.size(); i++) {
+                        if (i == 0) {
+                            finalString = uniqueList[i]
+                        } else {
+                            finalString = finalString + "," + uniqueList[i]
+                        }
+                    }
+                    
+                    env.GRADIFY_BUILD_LIST = finalString
+                    env.CHANGED_SERVICES = finalString
+                    echo "PIPELINE_PLAN: Services to process: [${env.GRADIFY_BUILD_LIST}]"
+                }
+            }
+        }
 
         stage('Environment Verification') {
             steps {
@@ -51,30 +106,30 @@ pipeline {
 
         stage('Unit Testing') {
             steps {
-                echo "Running tests for all microservices..."
-                
-                // Java Services
-                dir('admin-service') { sh './mvnw clean package' }
-                dir('professor-service') { sh './mvnw clean package' }
-                dir('student-service') { sh './mvnw clean package' }
-                dir('user-service') { sh './mvnw clean package' }
-
-                // Go Services
-                dir('api-gateway') { sh 'go test ./...' }
-                dir('stats-service') { sh 'go test ./...' }
-
-                // Front-end
-                dir('front-end') {
-                    sh 'npm ci'
-
-                    // Run tests only if test script exists
-                    sh '''
-                        if npm run | grep -q "test"; then
-                            npm run test
-                        else
-                            echo "No frontend tests found, skipping..."
-                        fi
-                    '''
+                script {
+                    if (!env.GRADIFY_BUILD_LIST) {
+                        echo "No services to test."
+                        return
+                    }
+                    
+                    def services = env.GRADIFY_BUILD_LIST.split(',')
+                    def javaServices = ['admin-service', 'professor-service', 'student-service', 'user-service']
+                    
+                    for (svc in services) {
+                        if (!svc) continue
+                        if (javaServices.contains(svc)) {
+                            dir(svc) {
+                                echo "Running Java Tests and Building: ${svc}"
+                                sh './mvnw clean package'
+                            }
+                        } else if (svc == 'api-gateway' || svc == 'stats-service') {
+                            dir(svc) { sh 'go test -v ./...' }
+                        } else if (svc == 'front-end') {
+                            dir('front-end') {
+                                sh 'npm install && npm test'
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -82,22 +137,17 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
+                    if (!env.GRADIFY_BUILD_LIST) return
+                    def services = env.GRADIFY_BUILD_LIST.split(',')
                     def javaServices = ['admin-service', 'professor-service', 'student-service', 'user-service']
-                    def otherServices = ['api-gateway', 'stats-service', 'front-end']
                     
-                    for (int i = 0; i < javaServices.size(); ++i) {
-                        def svc = javaServices[i]
+                    for (svc in services) {
+                        if (!svc) continue
                         dir(svc) {
-                            echo "Building ${svc}..."
-                            sh "cp target/*.jar app.jar"
-                            sh "docker build -t ${env.DOCKER_USER}/${svc}:latest ."
-                        }
-                    }
-                    
-                    for (int i = 0; i < otherServices.size(); ++i) {
-                        def svc = otherServices[i]
-                        dir(svc) {
-                            echo "Building ${svc}..."
+                            echo "Building Image: ${svc}"
+                            if (javaServices.contains(svc)) {
+                                sh "cp target/*.jar app.jar || echo 'No jar found'"
+                            }
                             sh "docker build -t ${env.DOCKER_USER}/${svc}:latest ."
                         }
                     }
@@ -108,16 +158,18 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 withCredentials([usernamePassword(credentialsId: env.DOCKERHUB_CRED, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
+                    retry(3) {
+                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
+                    }
                     script {
-                        def services = ['admin-service', 'professor-service', 'student-service', 'user-service', 'api-gateway', 'stats-service', 'front-end']
-                        for (int i = 0; i < services.size(); ++i) {
-                            def svc = services[i]
-                            dir(svc) {
-                                echo "Pushing ${svc}..."
-                                retry(3) {
-                                    sh "docker push ${env.DOCKER_USER}/${svc}:latest"
-                                }
+                        if (!env.GRADIFY_BUILD_LIST) return
+                        def services = env.GRADIFY_BUILD_LIST.split(',')
+                        
+                        for (svc in services) {
+                            if (!svc) continue
+                            echo "Pushing: ${svc}"
+                            retry(3) {
+                                sh "docker push ${env.DOCKER_USER}/${svc}:latest"
                             }
                         }
                     }
@@ -125,11 +177,19 @@ pipeline {
             }
         }
 
-        stage('Deploy via Ansible') {
+        stage('Deploy with Ansible') {
             steps {
-                dir('ansible') {
-                    // This triggers the ansible playbook to apply the k8s manifests
-                    sh 'ansible-playbook -i inventory.ini deploy-k8s.yml'
+                echo "Deploying Gradify using Ansible..."
+                withCredentials([string(credentialsId: 'ansible-vault-pass', variable: 'VAULT_PASS')]) {
+                    sh '''
+                        # Create a temporary password file for Ansible Vault
+                        trap 'rm -f .vault_pass.txt' EXIT
+                        printf "%s" "$VAULT_PASS" > .vault_pass.txt
+                        chmod 600 .vault_pass.txt
+                        
+                        # Run the Ansible playbook
+                        ansible-playbook ansible/deploy-k8s.yml --vault-password-file .vault_pass.txt
+                    '''
                 }
             }
         }
@@ -139,12 +199,12 @@ pipeline {
         failure {
             mail to: "${env.EMAIL_RECIPIENT}",
                  subject: "Pipeline Failed: ${currentBuild.fullDisplayName}",
-                 body: "The Gradify Jenkins pipeline failed. Please check the Jenkins console output to find the error."
+                 body: "The Gradify Jenkins pipeline failed. Please check the Jenkins console output."
         }
         success {
             mail to: "${env.EMAIL_RECIPIENT}",
                  subject: "Pipeline Succeeded: ${currentBuild.fullDisplayName}",
-                 body: "The Gradify application was successfully tested, built, pushed, and deployed via Ansible."
+                 body: "The Gradify application was successfully tested, built, pushed, and deployed."
         }
     }
 }

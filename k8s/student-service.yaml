@@ -21,17 +21,32 @@ spec:
     spec:
       containers:
       - name: student-service
-        image: key717/student-service:latest 
+        image: adityadave29/student-service:latest 
         imagePullPolicy: Always
         ports:
         - containerPort: 8085
+        livenessProbe:
+          tcpSocket:
+            port: 8085
+          initialDelaySeconds: 60
+          periodSeconds: 20
+        readinessProbe:
+          tcpSocket:
+            port: 8085
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        startupProbe:
+          tcpSocket:
+            port: 8085
+          failureThreshold: 12
+          periodSeconds: 10
         resources:
           requests:
             cpu: "100m"
-            memory: "256Mi"
+            memory: "512Mi"
           limits:
             cpu: "500m"
-            memory: "512Mi"
+            memory: "1Gi"
 ---
 apiVersion: v1
 kind: Service

@@ -21,10 +21,21 @@ spec:
     spec:
       containers:
       - name: front-end
-        image: key717/front-end:latest 
+        image: adityadave29/front-end:latest 
         imagePullPolicy: Always
         ports:
         - containerPort: 80
+        livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           requests:
             cpu: "50m"
